@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "keyguesser"
+version = "0.1.0"
+description = "Search secp256k1 private keys for a Bitcoin address, and measure exactly how hopeless that is"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Security :: Cryptography",
+    "Topic :: Education",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+keyguesser = "keyguesser.cli:main"
+
+[tool.setuptools]
+packages = ["keyguesser"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
