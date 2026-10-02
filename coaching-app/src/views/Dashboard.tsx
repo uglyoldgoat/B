@@ -19,17 +19,9 @@ import {
   weeklyRows,
 } from '../lib/calc';
 import { Block, Field, NumInput, Select, Stat, TextArea, TextInput, deltaTone, signed } from '../components/ui';
-import { LineChart } from '../components/charts';
-
-const CUT = /diet|prep|peak|competition|photoshoot/i;
-const GAIN = /gain|improvement/i;
-
-export function weightGoalDirection(phase: string | undefined): 'down' | 'up' | 'none' {
-  if (!phase) return 'none';
-  if (CUT.test(phase)) return 'down';
-  if (GAIN.test(phase)) return 'up';
-  return 'none';
-}
+import { WeightChart } from '../components/progress';
+import { nutritionSchedule, shortDayTitle, trainingSchedule } from '../lib/schedule';
+import { phaseDirection } from '../lib/review';
 
 export function Dashboard() {
   const { client, data, updateClient, go } = useApp();
@@ -50,12 +42,8 @@ export function Dashboard() {
   const stepsTarget = tl?.steps ?? p.stepsTarget;
   const idx = useMemo(() => foodIndex(data.foods), [data.foods]);
   const plans = client.nutritionDays.filter((d) => !d.archived);
-
-  const chartStart = Math.max(1, Math.max(week, lastWeek) - 15);
-  const chartRows = rows.filter((r) => r.week >= chartStart);
-  const raw = chartRows.flatMap((r) =>
-    (client.checkIns[r.week]?.days ?? []).flatMap((d, i) => (isNum(d.bw) ? [{ x: r.week - 0.5 + (i + 0.5) / 7, y: d.bw }] : [])),
-  );
+  const tSched = trainingSchedule(client);
+  const nSched = nutritionSchedule(client);
 
   const age = ageOn(p.dob);
   const set = <K extends keyof typeof p>(k: K, v: (typeof p)[K]) =>
@@ -115,7 +103,7 @@ export function Dashboard() {
           label={latest ? `Weight · week ${latest.week} average` : 'Weight'}
           value={latest ? latest.kg.toFixed(1) : '—'}
           unit="kg"
-          delta={weekChange !== null && prevRow ? { text: `${signed(weekChange, 1, ' kg')} vs ${prevRow.week === latest!.week - 1 ? 'previous week' : `week ${prevRow.week}`}`, tone: deltaTone(weekChange, weightGoalDirection(phase)) } : null}
+          delta={weekChange !== null && prevRow ? { text: `${signed(weekChange, 1, ' kg')} vs ${prevRow.week === latest!.week - 1 ? 'previous week' : `week ${prevRow.week}`}`, tone: deltaTone(weekChange, phaseDirection(phase)) } : null}
           sub={isNum(p.startWeightKg) && latest ? `Start ${num(p.startWeightKg, 1)} kg · ${signed(latest.kg - p.startWeightKg, 1, ' kg')} total` : undefined}
         />
         <Stat label={`This week's check-in`} value={`${logged}/7`} unit="days" sub={thisWeek?.complete ? 'Marked complete' : `Week of ${formatDate(weekStart(client.week1Date, week))}`}>
@@ -152,27 +140,7 @@ export function Dashboard() {
       </div>
 
       <Block title="Bodyweight" eyebrow="Weekly average with daily weigh-ins" actions={<button className="btn small" onClick={() => go('timeline')}>Timeline</button>}>
-        {chartRows.some((r) => r.avgBw !== null) ? (
-          <LineChart
-            ariaLabel="Weekly average bodyweight"
-            points={chartRows.map((r) => ({
-              x: r.week,
-              y: r.avgBw,
-              tip: (
-                <>
-                  Week {r.week} · {formatDate(r.date)}
-                  <br />
-                  Average <b>{r.avgBw === null ? 'no data' : `${num(r.avgBw, 1)} kg`}</b>
-                  {r.change !== null && <> ({signed(r.change, 1)})</>}
-                </>
-              ),
-            }))}
-            raw={raw}
-            unit=" kg"
-          />
-        ) : (
-          <p className="muted">No weigh-ins yet. Daily weights from the check-in appear here.</p>
-        )}
+        <WeightChart client={client} />
       </Block>
 
       <div className="grid two">
@@ -245,35 +213,75 @@ export function Dashboard() {
         </Block>
       </div>
 
-      <Block title="Weekly training split">
+      <Block
+        title="Weekly schedule"
+        eyebrow="Workouts & meal plans"
+        actions={
+          <button className="btn small" onClick={() => setEditing((e) => !e)}>
+            {editing ? 'Done' : 'Edit'}
+          </button>
+        }
+      >
+        <p className="small ink2">The client's Today screen uses this to show the right workout and meal plan each day.</p>
         <div className="split">
           {WEEKDAYS.map((d, i) => {
-            const v = p.weeklySplit[i] ?? '';
+            const session = client.program.find((x) => x.id === tSched[i]);
+            const plan = client.nutritionDays.find((x) => x.id === nSched[i]);
             return (
-              <div key={d} className={v ? '' : 'rest'}>
+              <div key={d} className={session ? '' : 'rest'}>
                 <div className="d">{d.slice(0, 3)}</div>
                 {editing ? (
-                  <TextInput
-                    className="bare"
-                    ariaLabel={`${d} session`}
-                    value={v}
-                    placeholder="Rest"
-                    onChange={(val) =>
-                      updateClient((c) => {
-                        const arr = [...c.profile.weeklySplit];
-                        while (arr.length < 7) arr.push('');
-                        arr[i] = val;
-                        c.profile.weeklySplit = arr;
-                      })
-                    }
-                  />
+                  <div className="stack" style={{ gap: 4 }}>
+                    <select
+                      className="bare"
+                      aria-label={`${d} workout`}
+                      value={tSched[i]}
+                      onChange={(e) =>
+                        updateClient((c) => {
+                          const arr = [...trainingSchedule(c)];
+                          arr[i] = e.target.value;
+                          c.trainingSchedule = arr;
+                        })
+                      }
+                    >
+                      <option value="">Rest</option>
+                      {client.program.map((x) => (
+                        <option key={x.id} value={x.id}>
+                          {shortDayTitle(x.title)}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="bare"
+                      aria-label={`${d} meal plan`}
+                      value={nSched[i]}
+                      onChange={(e) =>
+                        updateClient((c) => {
+                          const arr = [...nutritionSchedule(c)];
+                          arr[i] = e.target.value;
+                          c.nutritionSchedule = arr;
+                        })
+                      }
+                    >
+                      <option value="">No plan</option>
+                      {plans.map((x) => (
+                        <option key={x.id} value={x.id}>
+                          {x.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 ) : (
-                  <div className="s">{v || <span className="muted">Rest</span>}</div>
+                  <>
+                    <div className="s">{session ? shortDayTitle(session.title) : <span className="muted">Rest</span>}</div>
+                    <div className="small muted">{plan?.name ?? ''}</div>
+                  </>
                 )}
               </div>
             );
           })}
         </div>
+        {!client.program.length && <p className="small muted">Add training days on the Training tab to schedule them here.</p>}
       </Block>
 
       <div className="grid two">

@@ -26,6 +26,7 @@ import {
   type TimelineWeek,
 } from '../types';
 import { emptyWeek, formatDate, isNum, minutesToClock, uid } from './calc';
+import { inferNutritionSchedule, inferTrainingSchedule } from './schedule';
 
 type Sheet = ExcelJS.Worksheet;
 
@@ -588,6 +589,9 @@ export function importWorkbook(wb: ExcelJS.Workbook, fileName = ''): ImportResul
     );
   }
 
+  const trainingSchedule = inferTrainingSchedule(program, profile.weeklySplit);
+  const nutritionSchedule = inferNutritionSchedule(meal.days, trainingSchedule);
+
   const id = uid('client');
   const client: Client = {
     id,
@@ -605,6 +609,8 @@ export function importWorkbook(wb: ExcelJS.Workbook, fileName = ''): ImportResul
     supplements,
     photoPoses: photoData.poses,
     photos: {},
+    trainingSchedule,
+    nutritionSchedule,
   };
   return { client, exercises, foods, photos: photoData.photos, notes };
 }

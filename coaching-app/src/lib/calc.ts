@@ -445,3 +445,22 @@ export function num(v: Num | undefined, digits = 0): string {
   if (!isNum(v)) return '';
   return v.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
 }
+
+/** Where today falls in the program: week number and Monday-first day index. */
+export function todayPosition(week1Date: string, today = new Date()): { week: number; day: number; iso: string } {
+  const week = currentWeek(week1Date, today) ?? 1;
+  const d = daysBetween(weekStart(week1Date, week), today) ?? 0;
+  return { week, day: Math.min(6, Math.max(0, d)), iso: toISODate(today) };
+}
+
+/** Most recent coach feedback, newest week first. */
+export function latestFeedback(client: Client): { week: number; text: string } | null {
+  const weeks = Object.keys(client.checkIns)
+    .map(Number)
+    .sort((a, b) => b - a);
+  for (const w of weeks) {
+    const t = client.checkIns[w].coachFeedback?.trim();
+    if (t) return { week: w, text: t };
+  }
+  return null;
+}

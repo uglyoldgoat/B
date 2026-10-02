@@ -131,8 +131,9 @@ export interface CheckInWeek {
   days: DayEntry[]; // always 7
   measurements: Record<string, Num>;
   summary: WeeklySummary;
-  complete: boolean;
+  complete: boolean; // client says the week's check-in is done
   coachFeedback: string;
+  reviewed?: boolean; // coach has reviewed the week
 }
 
 export interface ProgramExercise {
@@ -209,10 +210,24 @@ export interface Client {
   photoPoses: string[];
   /** "week-pose" -> photo key in the photo store */
   photos: Record<string, string>;
+  /** Monday-first: program day id per weekday, '' for rest. */
+  trainingSchedule?: string[];
+  /** Monday-first: meal plan day id per weekday, '' when not set. */
+  nutritionSchedule?: string[];
+  /** When the coach last imported an update from this client. */
+  lastUpdateAt?: string;
+  /** When this device last sent a file (client update or coach plan). */
+  lastSentAt?: string;
+  /** Program day id -> date each logged session started (index = session number - 1). */
+  sessionDates?: Record<string, string[]>;
 }
+
+/** Who uses this device: a coach managing clients, or one client. */
+export type Mode = 'coach' | 'client';
 
 export interface AppData {
   version: 1;
+  mode?: Mode;
   activeClientId: string;
   clients: Client[];
   exercises: Exercise[];

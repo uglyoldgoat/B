@@ -47,24 +47,24 @@ export function Logbook() {
         <div>
           <div className="eyebrow">Progressive overload</div>
           <h1>Logbook</h1>
-          <p>Log weight and reps for each working set. Last week's numbers show in grey as the number to beat.</p>
+          <p>Weight and reps for each working set, one column per session. The previous session's numbers show in grey as the number to beat.</p>
         </div>
         <div className="week-nav">
-          <button className="btn" aria-label="Previous week" disabled={week <= 1} onClick={() => setWeek((w) => w - 1)}>
+          <button className="btn" aria-label="Previous session" disabled={week <= 1} onClick={() => setWeek((w) => w - 1)}>
             ‹
           </button>
           <label className="sr-only" htmlFor="lb-week">
-            Logbook week
+            Session
           </label>
           <select id="lb-week" value={week} onChange={(e) => setWeek(Number(e.target.value))}>
             {Array.from({ length: totalWeeks }, (_, i) => i + 1).map((w) => (
               <option key={w} value={w}>
-                Week {w}
+                Session {w}
                 {w <= latest ? ' · logged' : ''}
               </option>
             ))}
           </select>
-          <button className="btn" aria-label="Next week" onClick={() => setWeek((w) => w + 1)}>
+          <button className="btn" aria-label="Next session" onClick={() => setWeek((w) => w + 1)}>
             ›
           </button>
         </div>
@@ -151,20 +151,20 @@ export function Logbook() {
                         <span className={`delta ${stats.volume > prevStats.volume ? 'good' : stats.volume < prevStats.volume ? 'bad' : 'flat'}`}>
                           {' '}
                           ({stats.volume >= prevStats.volume ? '+' : '−'}
-                          {num(Math.abs(stats.volume - prevStats.volume))} vs last week)
+                          {num(Math.abs(stats.volume - prevStats.volume))} vs previous session)
                         </span>
                       )}
                       {' · '}top set <b className="num" style={{ color: 'var(--ink)' }}>{num(stats.topKg, 1)} kg</b>
                     </>
                   ) : prevStats.sets ? (
-                    <>Last week: volume {num(prevStats.volume)} kg, top set {num(prevStats.topKg, 1)} kg</>
+                    <>Previous session: volume {num(prevStats.volume)} kg, top set {num(prevStats.topKg, 1)} kg</>
                   ) : (
-                    'No sets logged this week'
+                    'No sets logged in this session'
                   )}
                 </span>
                 {n > 0 && (
                   <button className="btn ghost small" onClick={() => setHistoryFor(open ? null : ex.id)}>
-                    {open ? 'Hide history' : `History (${n} week${n === 1 ? '' : 's'})`}
+                    {open ? 'Hide history' : `History (${n} session${n === 1 ? '' : 's'})`}
                   </button>
                 )}
               </div>
@@ -173,7 +173,7 @@ export function Logbook() {
                   <table>
                     <thead>
                       <tr>
-                        <th>Week</th>
+                        <th>Session</th>
                         {Array.from({ length: Math.max(4, ...logs.map((w) => w.length)) }, (_, s) => (
                           <th key={s}>Set {s + 1}</th>
                         ))}

@@ -60,7 +60,7 @@ function PhotoCell({ photoKey, label, onPick, onRemove }: { photoKey?: string; l
   );
 }
 
-function CompareImage({ photoKey, label }: { photoKey?: string; label: string }) {
+export function CompareImage({ photoKey, label }: { photoKey?: string; label: string }) {
   const url = usePhotoUrl(photoKey);
   return (
     <figure style={{ margin: 0 }} className="stack">
@@ -72,7 +72,8 @@ function CompareImage({ photoKey, label }: { photoKey?: string; label: string })
   );
 }
 
-export function Photos() {
+/** `simple` is the client version: this week's photos and a comparison only. */
+export function Photos({ embedded = false, simple = false }: { embedded?: boolean; simple?: boolean }) {
   const { client, updateClient, notify } = useApp();
   const now = currentWeek(client.week1Date) ?? 1;
   const photoWeeks = Object.keys(client.photos).map((k) => Number(k.split('-')[0]));
@@ -112,13 +113,27 @@ export function Photos() {
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">Progress photos</div>
-          <h1>Photos</h1>
-          <p>Photos stay in this browser. Take them in the same light, place and time of day each week.</p>
+      {!embedded && (
+        <div className="page-head">
+          <div>
+            <div className="eyebrow">Progress photos</div>
+            <h1>Photos</h1>
+            <p>Photos stay in this browser. Take them in the same light, place and time of day each week.</p>
+          </div>
         </div>
-      </div>
+      )}
+      {simple && (
+        <Block title={`This week's photos (week ${now})`} eyebrow="Same place, same light, first thing in the morning">
+          <div className="photo-grid">
+            {shownPoses.map((p) => (
+              <div key={p} className="stack" style={{ gap: 4 }}>
+                <span className="small ink2">{poses[p]}</span>
+                <PhotoCell photoKey={client.photos[`${now}-${p}`]} label={`${poses[p]}, week ${now}`} onPick={() => pick(now, p)} />
+              </div>
+            ))}
+          </div>
+        </Block>
+      )}
       <input
         ref={input}
         type="file"
@@ -170,10 +185,12 @@ export function Photos() {
             ))}
           </div>
         ) : (
-          <p className="muted">No photos yet. Add the first set below, then compare any two weeks here.</p>
+          <p className="muted">No photos yet. Add your first set{simple ? ' above' : ' below'}, then compare any two weeks here.</p>
         )}
       </Block>
 
+      {!simple && (
+        <>
       <Block
         title="All photos"
         actions={
@@ -231,6 +248,8 @@ export function Photos() {
           </table>
         </div>
       </Block>
+        </>
+      )}
     </>
   );
 }

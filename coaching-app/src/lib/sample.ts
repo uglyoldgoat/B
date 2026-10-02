@@ -6,6 +6,7 @@ import {
   type AppData,
   type CheckInWeek,
   type Client,
+  type DayPlan,
   type DayEntry,
   type Exercise,
   type Food,
@@ -15,6 +16,7 @@ import {
   type TimelineWeek,
 } from '../types';
 import { addDays, emptyWeek, round, toISODate, uid } from './calc';
+import { inferNutritionSchedule, inferTrainingSchedule } from './schedule';
 
 function rng(seed: number) {
   let s = seed >>> 0;
@@ -278,9 +280,14 @@ export function makeSampleClient(today = new Date()): Client {
     };
   }
 
+  const nutritionDays = makeSamplePlans();
+  const trainingSchedule = inferTrainingSchedule(program, ['Lower', '', 'Upper', '', 'Lower', 'Upper', '']);
+
   return {
     id: uid('client'),
     isSample: true,
+    trainingSchedule,
+    nutritionSchedule: inferNutritionSchedule(nutritionDays, trainingSchedule),
     profile: {
       name: 'Sample client',
       dob: '1994-03-14',
@@ -313,7 +320,20 @@ export function makeSampleClient(today = new Date()): Client {
     measurementSites: [...DEFAULT_SITES],
     program,
     logbook,
-    nutritionDays: [
+    nutritionDays,
+    supplements: [
+      { id: uid('sup'), name: 'Creatine monohydrate', dose: '5 g', timing: 'Any time, daily', notes: 'Supports strength and training output', link: '' },
+      { id: uid('sup'), name: 'Vitamin D3', dose: '2,000 IU', timing: 'With breakfast', notes: 'Low sun exposure in winter', link: '' },
+      { id: uid('sup'), name: 'Omega-3 fish oil', dose: '2 g EPA+DHA', timing: 'With a meal', notes: '', link: '' },
+      { id: uid('sup'), name: 'Magnesium glycinate', dose: '300 mg', timing: 'Before bed', notes: 'Sleep quality', link: '' },
+    ],
+    photoPoses: [...DEFAULT_POSES],
+    photos: {},
+  };
+}
+
+function makeSamplePlans(): DayPlan[] {
+  return [
       {
         id: uid('plan'),
         name: 'Training day',
@@ -410,16 +430,7 @@ export function makeSampleClient(today = new Date()): Client {
           },
         ],
       },
-    ],
-    supplements: [
-      { id: uid('sup'), name: 'Creatine monohydrate', dose: '5 g', timing: 'Any time, daily', notes: 'Supports strength and training output', link: '' },
-      { id: uid('sup'), name: 'Vitamin D3', dose: '2,000 IU', timing: 'With breakfast', notes: 'Low sun exposure in winter', link: '' },
-      { id: uid('sup'), name: 'Omega-3 fish oil', dose: '2 g EPA+DHA', timing: 'With a meal', notes: '', link: '' },
-      { id: uid('sup'), name: 'Magnesium glycinate', dose: '300 mg', timing: 'Before bed', notes: 'Sleep quality', link: '' },
-    ],
-    photoPoses: [...DEFAULT_POSES],
-    photos: {},
-  };
+    ];
 }
 
 export function makeSampleData(): AppData {

@@ -8,11 +8,41 @@ working from there.
 All data stays in the browser (IndexedDB). Nothing is uploaded. No client data
 is stored in this repository.
 
-## What each screen does
+## Two ways to use it
+
+On first open the app asks who uses the device.
+
+- **Coach** (laptop or phone): all clients in one list with who needs a review,
+  a one-screen weekly review per client, and every planning screen.
+- **Client** (their phone): six simple tabs: Today, Check-in, Workout, Meals,
+  Progress, More. Plain language throughout: ratings show words ("4 = Good"),
+  tempo and RIR are written out ("3 s down, 1 s pause, 1 s up", "stop when you
+  could do about 2 more reps"), and only nine daily items are required.
+
+The coach can press **Client view** to see exactly what a client sees.
+
+### Keeping coach and client in sync (no server)
+
+1. Coach: Weekly review → **Send plan & feedback**. This shares a small `.txt`
+   file (WhatsApp, email…).
+2. Client: opens the file in the app (first run, or More → Files from your
+   coach). Their own logs are never overwritten.
+3. Client logs daily. On check-in day: **Send my check-in**, which shares a file
+   back. Recent progress photos can be included.
+4. Coach: All clients → Add or update a client → **Open check-in file**. The
+   client's logs merge in; the coach's feedback and plan are kept.
+
+Each side only overwrites what it owns: the client owns daily logs,
+measurements, weekly answers and the logbook; the coach owns the plan, targets,
+schedule and feedback.
+
+## Coach screens
 
 | Screen | Replaces sheet | What it does |
 | --- | --- | --- |
-| Dashboard | Dashboard | Current week and phase, weekly-average weight with change, this week's check-in progress, steps and calories vs target, bodyweight chart, nutrition targets, goals, training split, habits, guide |
+| All clients | — | Every client with status (needs review / up to date), weight trend, days logged and the main flags |
+| Weekly review | — | Flags in plain words (missed weigh-ins, steps or calories off target, short sleep, high stress, missed workouts), the week next to the week before and targets, the client's answers, measurement changes, photos, feedback, next week's targets, send the plan |
+| Overview | Dashboard | Current week and phase, weekly-average weight with change, this week's check-in progress, steps and calories vs target, bodyweight chart, nutrition targets, goals, training split, habits, guide |
 | Check-in | Check-In | Daily form (phone-friendly day view) or full week grid. Weekly averages are calculated the same way as the sheet. Weekly measurements, weekly summary questions, coach feedback, "complete" flag |
 | Timeline | Timeline | Week-by-week table: phase, averages from the check-ins, coach targets and notes. Bodyweight and steps charts, measurement trends |
 | Training | Training | Program days with sets, reps, tempo, RIR, technique, rest, set-up notes and video links from the library. Weekly sets per body part |
@@ -21,11 +51,11 @@ is stored in this repository.
 | Photos | Photos | Upload progress photos per week and pose, compare any two weeks side by side |
 | Supplements | Supplements | Supplement list with dose, timing, notes and links |
 | Library | Exercise / Nutrition Database | Searchable, editable exercise and food libraries shared by all clients |
-| Clients & data | — | Import workbooks, add or delete clients, back up and restore |
+| Settings | — | Import workbooks, add or delete clients, back up and restore, device role |
 
 ## Importing a workbook
 
-Clients & data → **Choose workbook…** and pick the client's `.xlsx`. From Google
+All clients → Add or update a client → **Choose workbook…** and pick the client's `.xlsx`. From Google
 Sheets, download it first with File → Download → Microsoft Excel (.xlsx).
 
 The importer reads values at the template's fixed cell positions. It uses the
@@ -87,7 +117,7 @@ static host (GitHub Pages, Netlify, Cloudflare Pages, S3). There is no server.
 
 ## Limitations
 
-- Data lives in one browser on one device. Use Clients & data → Download backup
-  to move it or keep a copy. Coach and client do not share data in real time;
-  that needs a backend with accounts, which this version does not have.
+- Data lives in one browser per device. Coach and client exchange files by
+  hand; there is no live sync. That needs a backend with accounts, which this
+  version does not have. Use Settings → Download backup to keep a copy.
 - Exporting back to `.xlsx` is not supported. Backups are JSON.

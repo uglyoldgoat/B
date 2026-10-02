@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { produce } from 'immer';
 import { Ctx, type AppCtx } from './context';
-import type { AppData, Client } from './types';
+import type { AppData, Client, Mode } from './types';
 import { loadData, saveData } from './lib/store';
-import { makeSampleData } from './lib/sample';
+import { Icon } from './components/icons';
+import { Welcome } from './views/Welcome';
+// Coach screens
+import { Clients } from './views/Clients';
 import { Dashboard } from './views/Dashboard';
+import { Review } from './views/Review';
 import { CheckIn } from './views/CheckIn';
 import { Timeline } from './views/Timeline';
 import { Training } from './views/Training';
@@ -14,49 +18,78 @@ import { Photos } from './views/Photos';
 import { Supplements } from './views/Supplements';
 import { Library } from './views/Library';
 import { DataView } from './views/DataView';
+// Client screens
+import { Today } from './views/client/Today';
+import { ClientCheckIn } from './views/client/ClientCheckIn';
+import { Workout } from './views/client/Workout';
+import { Meals } from './views/client/Meals';
+import { Progress } from './views/client/Progress';
+import { More } from './views/client/More';
 
-const TABS = [
-  { id: 'dashboard', label: 'Dashboard', View: Dashboard },
-  { id: 'checkin', label: 'Check-in', View: CheckIn },
+interface Tab {
+  id: string;
+  label: string;
+  View: ComponentType;
+  icon?: string;
+  /** Shown before the client was chosen (not tied to the active client). */
+  global?: boolean;
+}
+
+const COACH_TABS: Tab[] = [
+  { id: 'clients', label: 'All clients', View: Clients, global: true },
+  { id: 'overview', label: 'Overview', View: Dashboard },
+  { id: 'review', label: 'Weekly review', View: Review },
+  { id: 'checkin', label: 'Check-ins', View: CheckIn },
   { id: 'timeline', label: 'Timeline', View: Timeline },
   { id: 'training', label: 'Training', View: Training },
   { id: 'logbook', label: 'Logbook', View: Logbook },
   { id: 'nutrition', label: 'Meal plan', View: Nutrition },
   { id: 'photos', label: 'Photos', View: Photos },
   { id: 'supplements', label: 'Supplements', View: Supplements },
-  { id: 'library', label: 'Library', View: Library },
-  { id: 'data', label: 'Clients & data', View: DataView },
-] as const;
+  { id: 'library', label: 'Library', View: Library, global: true },
+  { id: 'data', label: 'Settings', View: DataView, global: true },
+];
 
-function tabFromHash(): string {
+const CLIENT_TABS: Tab[] = [
+  { id: 'today', label: 'Today', View: Today, icon: 'today' },
+  { id: 'log', label: 'Check-in', View: ClientCheckIn, icon: 'log' },
+  { id: 'workout', label: 'Workout', View: Workout, icon: 'workout' },
+  { id: 'meals', label: 'Meals', View: Meals, icon: 'meals' },
+  { id: 'progress', label: 'Progress', View: Progress, icon: 'progress' },
+  { id: 'more', label: 'More', View: More, icon: 'more' },
+];
+
+const ALIASES: Record<string, string> = { dashboard: 'overview' };
+
+function hashTab(): string {
   const h = typeof location !== 'undefined' ? location.hash.replace('#', '') : '';
-  return TABS.some((t) => t.id === h) ? h : 'dashboard';
+  return ALIASES[h] ?? h;
 }
 
 export default function App() {
   const [data, setData] = useState<AppData | null>(null);
-  const [tab, setTab] = useState(tabFromHash);
+  const [firstRun, setFirstRun] = useState(false);
+  const [tab, setTab] = useState(hashTab);
+  const [preview, setPreviewState] = useState(false);
   const [toast, setToast] = useState('');
   const loaded = useRef(false);
 
   useEffect(() => {
     let alive = true;
-    loadData()
-      .then((d) => {
-        if (!alive) return;
-        setData(d && d.clients?.length ? d : makeSampleData());
-        loaded.current = true;
-      })
-      .catch(() => {
-        setData(makeSampleData());
-        loaded.current = true;
-      });
+    const done = (d: AppData | undefined) => {
+      if (!alive) return;
+      if (d && d.clients?.length) {
+        // Data saved before roles existed belongs to a coach.
+        setData(d.mode ? d : { ...d, mode: 'coach' });
+      } else setFirstRun(true);
+      loaded.current = true;
+    };
+    loadData().then(done, () => done(undefined));
     return () => {
       alive = false;
     };
   }, []);
 
-  // Save shortly after each change.
   useEffect(() => {
     if (!data || !loaded.current) return;
     const t = setTimeout(() => void saveData(data), 300);
@@ -64,14 +97,14 @@ export default function App() {
   }, [data]);
 
   useEffect(() => {
-    const onHash = () => setTab(tabFromHash());
+    const onHash = () => setTab(hashTab());
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(''), 3200);
+    const t = setTimeout(() => setToast(''), 3600);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -84,11 +117,20 @@ export default function App() {
     try {
       history.replaceState(null, '', `#${id}`);
     } catch {
-      /* ignore */
+      /* not allowed in some embedded viewers */
     }
     window.scrollTo({ top: 0 });
   }, []);
 
+  const setPreview = useCallback(
+    (on: boolean) => {
+      setPreviewState(on);
+      go(on ? 'today' : 'overview');
+    },
+    [go],
+  );
+
+  const mode: Mode = data?.mode ?? 'coach';
   const client: Client | undefined = data?.clients.find((c) => c.id === data.activeClientId) ?? data?.clients[0];
 
   const ctx: AppCtx | null = useMemo(() => {
@@ -104,10 +146,24 @@ export default function App() {
         }),
       notify: setToast,
       go,
+      mode,
+      preview,
+      setPreview,
     };
-  }, [data, client, update, go]);
+  }, [data, client, update, go, mode, preview, setPreview]);
 
-  if (!ctx || !client) {
+  if (firstRun && !data) {
+    return (
+      <Welcome
+        onStart={(d) => {
+          setData(d);
+          setFirstRun(false);
+          go(d.mode === 'client' ? 'today' : 'clients');
+        }}
+      />
+    );
+  }
+  if (!ctx || !client || !data) {
     return (
       <main>
         <p className="muted">Loading…</p>
@@ -115,7 +171,10 @@ export default function App() {
     );
   }
 
-  const Active = TABS.find((t) => t.id === tab)?.View ?? Dashboard;
+  const clientView = mode === 'client' || preview;
+  const tabs = clientView ? CLIENT_TABS : COACH_TABS;
+  const active = tabs.find((t) => t.id === tab) ?? tabs[0];
+  const Active = active.View;
 
   return (
     <Ctx.Provider value={ctx}>
@@ -127,49 +186,69 @@ export default function App() {
                 Coach<span>book</span>
               </span>
             </div>
-            <label className="sr-only" htmlFor="client-select">
-              Client
-            </label>
-            <select
-              id="client-select"
-              style={{ width: 'auto', maxWidth: '60vw' }}
-              value={client.id}
-              onChange={(e) => {
-                if (e.target.value === '__import') {
-                  go('data');
-                  return;
-                }
-                update((d) => {
-                  d.activeClientId = e.target.value;
-                });
-              }}
-            >
-              {data!.clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.profile.name || 'Unnamed client'}
-                  {c.isSample ? ' (sample)' : ''}
-                </option>
-              ))}
-              <option value="__import">Import or add a client…</option>
-            </select>
+            {mode === 'coach' && !preview && (
+              <>
+                <label className="sr-only" htmlFor="client-select">
+                  Client
+                </label>
+                <select
+                  id="client-select"
+                  style={{ width: 'auto', maxWidth: '46vw' }}
+                  value={client.id}
+                  onChange={(e) => {
+                    update((d) => {
+                      d.activeClientId = e.target.value;
+                    });
+                    if (active.global && active.id !== 'library') go('overview');
+                  }}
+                >
+                  {data.clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.profile.name || 'Unnamed client'}
+                      {c.isSample ? ' (sample)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <button className="btn small" onClick={() => setPreview(true)} title="See the app the way this client sees it">
+                  Client view
+                </button>
+              </>
+            )}
+            {clientView && <span className="ink2 small">{client.profile.name}</span>}
           </div>
-          <nav className="tabs" aria-label="Sections">
-            {TABS.map((t) => (
-              <button key={t.id} className="tab" aria-current={t.id === tab ? 'page' : undefined} onClick={() => go(t.id)}>
-                {t.label}
+          <nav className={`tabs ${clientView ? 'client-tabs' : ''}`} aria-label="Sections">
+            {tabs.map((t, i) => (
+              <button
+                key={t.id}
+                className={`tab ${!clientView && i > 0 && t.global && !tabs[i - 1].global ? 'tab-sep' : ''}`}
+                aria-current={t.id === active.id ? 'page' : undefined}
+                onClick={() => go(t.id)}
+              >
+                {t.icon && <Icon name={t.icon} />}
+                <span>{t.label}</span>
               </button>
             ))}
           </nav>
         </div>
       </header>
-      <main key={`${client.id}-${tab}`}>
-        {client.isSample && tab !== 'data' && (
+      <main key={`${client.id}-${active.id}-${clientView}`} className={clientView ? 'client-main' : undefined}>
+        {preview && (
           <div className="banner info">
             <span className="grow">
-              You're looking at a <b>sample client</b> with made-up data. Import a client workbook (.xlsx) to see real data. It stays in this browser.
+              You're seeing the app the way <b>{client.profile.name || 'this client'}</b> sees it on their phone.
             </span>
-            <button className="btn primary small" onClick={() => go('data')}>
-              Import a workbook
+            <button className="btn primary small" onClick={() => setPreview(false)}>
+              Back to coach view
+            </button>
+          </div>
+        )}
+        {mode === 'coach' && !preview && client.isSample && active.id !== 'data' && (
+          <div className="banner info">
+            <span className="grow">
+              This is a <b>sample client</b> with made-up data. Import a client's workbook to start for real.
+            </span>
+            <button className="btn primary small" onClick={() => go('clients')}>
+              Add a client
             </button>
           </div>
         )}

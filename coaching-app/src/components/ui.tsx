@@ -160,22 +160,57 @@ export function Select({
   );
 }
 
-/** 1–N rating as a row of toggle buttons. Clicking the active value clears it. */
-export function Scale({ value, max, onChange, label }: { value: Num | undefined; max: number; onChange: (v: Num) => void; label: string }) {
+/** 1–N rating as a row of toggle buttons. Clicking the active value clears it.
+ * With `words`, the meaning of the chosen point is shown next to it. */
+export function Scale({
+  value,
+  max,
+  onChange,
+  label,
+  words,
+  big,
+}: {
+  value: Num | undefined;
+  max: number;
+  onChange: (v: Num) => void;
+  label: string;
+  words?: string[];
+  big?: boolean;
+}) {
+  const chosen = typeof value === 'number' ? words?.[value - 1] : undefined;
   return (
-    <div className="seg" role="group" aria-label={label}>
-      {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
-        <button key={n} type="button" aria-pressed={value === n} onClick={() => onChange(value === n ? null : n)}>
-          {n}
-        </button>
-      ))}
+    <div className="scale">
+      <div className={`seg ${big ? 'big' : ''}`} role="group" aria-label={label}>
+        {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
+          <button key={n} type="button" aria-pressed={value === n} title={words?.[n - 1]} onClick={() => onChange(value === n ? null : n)}>
+            {n}
+          </button>
+        ))}
+      </div>
+      {words && (
+        <span className={`scale-word ${chosen ? 'on' : ''}`}>
+          {chosen ?? `1 = ${words[0].toLowerCase()}, ${max} = ${words[max - 1].toLowerCase()}`}
+        </span>
+      )}
     </div>
   );
 }
 
-export function Choice({ value, options, onChange, label }: { value: string | undefined; options: string[]; onChange: (v: string) => void; label: string }) {
+export function Choice({
+  value,
+  options,
+  onChange,
+  label,
+  big,
+}: {
+  value: string | undefined;
+  options: string[];
+  onChange: (v: string) => void;
+  label: string;
+  big?: boolean;
+}) {
   return (
-    <div className="seg" role="group" aria-label={label}>
+    <div className={`seg ${big ? 'big' : ''}`} role="group" aria-label={label}>
       {options.map((o) => (
         <button key={o} type="button" aria-pressed={value === o} onClick={() => onChange(value === o ? '' : o)}>
           {o}

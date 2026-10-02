@@ -1,48 +1,11 @@
 import { useRef, useState } from 'react';
 import { useApp } from '../context';
-import { DEFAULT_POSES, DEFAULT_SITES, type AppData, type Client, type Exercise, type Food } from '../types';
-import { formatDate, lastLoggedWeek, toISODate, uid } from '../lib/calc';
+import type { AppData, Exercise, Food } from '../types';
+import { blankClient } from '../lib/clients';
+import { formatDate, lastLoggedWeek, toISODate } from '../lib/calc';
 import { deletePhoto, getPhoto, putPhoto, storageAvailable } from '../lib/store';
 import { importFile } from '../lib/importer';
 import { Block, ConfirmButton } from '../components/ui';
-
-function blankClient(): Client {
-  const d = new Date();
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // this Monday
-  const week1 = toISODate(d);
-  return {
-    id: uid('client'),
-    profile: {
-      name: 'New client',
-      dob: '',
-      heightCm: null,
-      startWeightKg: null,
-      coachingStart: week1,
-      goal: '',
-      goalDate: '',
-      checkInDay: '',
-      stepsTarget: null,
-      cardioTarget: '',
-      trainingFocus: '',
-      habits: [],
-      shortTermGoals: [],
-      longTermGoals: [],
-      whys: [],
-      weeklySplit: ['', '', '', '', '', '', ''],
-      guide: [],
-    },
-    week1Date: week1,
-    timeline: {},
-    checkIns: {},
-    measurementSites: [...DEFAULT_SITES],
-    program: [],
-    logbook: {},
-    nutritionDays: [],
-    supplements: [],
-    photoPoses: [...DEFAULT_POSES],
-    photos: {},
-  };
-}
 
 function mergeByName<T extends { name: string }>(existing: T[], incoming: T[]): T[] {
   const map = new Map(existing.map((x) => [x.name.trim().toLowerCase(), x]));
@@ -98,7 +61,7 @@ export function DataView() {
         if (r.foods.length) d.foods = mergeByName<Food>(d.foods, r.foods);
       });
       notify(`Imported ${r.client.profile.name || 'client'}: ${Object.keys(r.client.checkIns).length} weeks of check-ins, ${r.photos.length} photos`);
-      go('dashboard');
+      go('overview');
     } catch (e) {
       setError(`Couldn't read that file. Make sure it's an .xlsx workbook made from the coaching template (in Google Sheets: File → Download → Microsoft Excel). Details: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
@@ -172,8 +135,8 @@ export function DataView() {
     <>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Setup</div>
-          <h1>Clients & data</h1>
+          <div className="eyebrow">Coach</div>
+          <h1>Settings & data</h1>
           <p>Everything is stored in this browser only. Nothing is uploaded anywhere.</p>
         </div>
       </div>
@@ -207,7 +170,7 @@ export function DataView() {
                   d.clients.push(c);
                   d.activeClientId = c.id;
                 });
-                go('dashboard');
+                go('overview');
               }}
             >
               Start a blank client
@@ -294,6 +257,23 @@ export function DataView() {
               <textarea readOnly rows={4} value={backupText} onFocus={(e) => e.currentTarget.select()} />
             </label>
           )}
+        </div>
+      </Block>
+
+      <Block title="This device">
+        <div className="card stack" style={{ gap: 10 }}>
+          <p className="ink2">This device is set up for a <b>coach</b>. A client's phone should be set up for a client instead: open the app there and choose “I'm a client”.</p>
+          <div>
+            <ConfirmButton
+              className="btn small"
+              label="Switch this device to client mode"
+              confirmLabel={`Click again: show ${client.profile.name || 'this client'}'s app`}
+              onConfirm={() => {
+                update((d) => void (d.mode = 'client'));
+                go('today');
+              }}
+            />
+          </div>
         </div>
       </Block>
     </>
