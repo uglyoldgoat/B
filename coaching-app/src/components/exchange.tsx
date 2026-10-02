@@ -136,6 +136,7 @@ export function SendPackage({
   const [withPhotos, setWithPhotos] = useState(true);
   const [busy, setBusy] = useState(false);
   const [fallback, setFallback] = useState('');
+  const [soft, setSoft] = useState(false);
   const week = currentWeek(client.week1Date) ?? 1;
   const recentPhotos = Object.entries(client.photos).filter(([slot]) => Number(slot.split('-')[0]) >= week - 1);
 
@@ -159,8 +160,15 @@ export function SendPackage({
       const name = packageFileName(client, kind);
       const outcome = await shareText(name, text, kind === 'client-update' ? 'Check-in for my coach' : 'Your coaching plan');
       if (outcome === 'shared') onSent('Sent');
-      else if (outcome === 'downloaded') onSent(`Saved ${name}. Send that file on WhatsApp or by email.`);
-      else if (outcome === 'failed') setFallback(text);
+      else if (outcome === 'downloaded') {
+        onSent(`Saved ${name}. Send that file on WhatsApp or by email.`);
+        // Some browsers and embedded viewers block downloads without telling the page.
+        setFallback(text);
+        setSoft(true);
+      } else if (outcome === 'failed') {
+        setFallback(text);
+        setSoft(false);
+      }
     } finally {
       setBusy(false);
     }
@@ -180,7 +188,7 @@ export function SendPackage({
       {fallback && (
         <div className="field">
           <label className="lbl" htmlFor="send-fallback">
-            This browser can't share files. Copy this text and send it in a message instead.
+            {soft ? "No file appeared? Copy this text and send it in a message instead." : "This browser can't share files. Copy this text and send it in a message instead."}
           </label>
           <textarea id="send-fallback" readOnly rows={4} value={fallback} onFocus={(e) => e.currentTarget.select()} />
           <button
