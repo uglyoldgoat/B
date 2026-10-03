@@ -1,5 +1,5 @@
 import { useApp } from '../../context';
-import { formatDate, safeHref } from '../../lib/calc';
+import { formatDate, localDate, safeHref } from '../../lib/calc';
 import { Block, ConfirmButton } from '../../components/ui';
 import { ImportPackage, SendPackage } from '../../components/exchange';
 
@@ -30,7 +30,7 @@ export function More() {
                 notify(m);
               }}
             />
-            {client.lastSentAt && <p className="small muted">Last sent {formatDate(client.lastSentAt.slice(0, 10), { weekday: 'short', day: 'numeric', month: 'short' })}.</p>}
+            {client.lastSentAt && <p className="small muted">Last sent {formatDate(localDate(client.lastSentAt), { weekday: 'short', day: 'numeric', month: 'short' })}.</p>}
           </section>
           <section className="card stack" style={{ gap: 10 }}>
             <h2>Files from your coach</h2>

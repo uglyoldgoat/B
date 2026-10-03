@@ -245,6 +245,7 @@ export type Agg =
   | 'countYes'
   | 'countIrregular'
   | 'countText' // number of days with a real entry
+  | 'countWorkouts' // days with a training session (not rest)
   | 'avgHours' // average of hours
   | 'avgClock' // circular mean of clock times
   | 'none';
@@ -283,7 +284,7 @@ export const CHECKIN_FIELDS: FieldDef[] = [
   { key: 'stress', label: 'Mental & emotional stress', hint: '1 low – 5 high', section: 'Biofeedback', type: 'scale5', agg: 'avg1', row: 18 },
   { key: 'doms', label: 'Muscle soreness (DOMS)', section: 'Biofeedback', type: 'yesno', agg: 'countYes', row: 19 },
   { key: 'illness', label: 'Signs of illness', section: 'Biofeedback', type: 'yesno', agg: 'countYes', row: 20 },
-  { key: 'session', label: 'Training session', hint: 'Which session did you do?', section: 'Daily activity', type: 'text', agg: 'countText', row: 23 },
+  { key: 'session', label: 'Training session', hint: 'Which session did you do?', section: 'Daily activity', type: 'text', agg: 'countWorkouts', row: 23 },
   { key: 'readiness', label: 'Readiness to train', hint: '1 low – 5 high', section: 'Daily activity', type: 'scale5', agg: 'avg1', row: 24 },
   { key: 'performance', label: 'Strength & performance', hint: '1 low – 5 high', section: 'Daily activity', type: 'scale5', agg: 'avg1', row: 25 },
   { key: 'trainingNotes', label: 'Training notes', hint: 'Regressions, progressions, pain', section: 'Daily activity', type: 'longtext', agg: 'none', row: 26 },

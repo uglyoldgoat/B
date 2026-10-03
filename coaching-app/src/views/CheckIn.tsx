@@ -27,6 +27,8 @@ export function formatSummary(f: FieldDef, v: SummaryValue | undefined): string 
     case 'countYes':
     case 'countText':
       return `${v} day${v === 1 ? '' : 's'}`;
+    case 'countWorkouts':
+      return `${v} workout${v === 1 ? '' : 's'}`;
     case 'countIrregular':
       return `${v} irregular`;
     case 'sum':
@@ -44,6 +46,8 @@ function aggLabel(f: FieldDef): string {
       return 'days “yes”';
     case 'countText':
       return 'days reported';
+    case 'countWorkouts':
+      return 'workouts';
     case 'countIrregular':
       return 'irregular days';
     case 'avgClock':

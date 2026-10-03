@@ -3,7 +3,7 @@ import { produce } from 'immer';
 import type { AppData, DayPlan, ProgramDay } from '../types';
 import { emptyWeek } from './calc';
 import { describeFeeder, describeRest, describeRir, describeTechnique, describeTempo, topReps } from './explain';
-import { weekFlags, weekToReview } from './review';
+import { weekFlags, weekTargets, weekToReview } from './review';
 import { inferNutritionSchedule, inferTrainingSchedule, shortDayTitle } from './schedule';
 import { applyPackage, buildClientUpdate, buildSetupPack, parsePackage } from './share';
 import { SAMPLE_EXERCISES, SAMPLE_FOODS, makeSampleClient } from './sample';
@@ -159,5 +159,16 @@ describe('coach and client handoff', () => {
   it('rejects other files', () => {
     expect(() => parsePackage('hello')).toThrow(/not a Coachbook/);
     expect(() => parsePackage('{"app":"other"}')).toThrow(/not a Coachbook/);
+  });
+});
+
+describe('calorie targets in the weekly review', () => {
+  it("uses the coach's targets for the week before the meal plan", () => {
+    const c = makeSampleClient();
+    c.timeline[2] = { ...c.timeline[2], intakeHigh: null, intakeMed: 2000, intakeLow: null };
+    expect(weekTargets(c, 2, SAMPLE_FOODS).kcal).toEqual({ min: 2000, max: 2000 });
+    c.timeline[2] = { ...c.timeline[2], intakeHigh: null, intakeMed: null, intakeLow: null };
+    const fromPlan = weekTargets(c, 2, SAMPLE_FOODS).kcal!;
+    expect(fromPlan.min).toBe(fromPlan.max); // average of the scheduled plan days
   });
 });

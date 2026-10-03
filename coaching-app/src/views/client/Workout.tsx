@@ -152,7 +152,7 @@ export function Workout() {
                   <p className="prose small">{info.notes}</p>
                 </details>
               )}
-              {readyToProgress && <p className="pill good" style={{ alignSelf: 'flex-start' }}>You hit {top} reps on every set last time. Try a little more weight.</p>}
+              {readyToProgress && <p className="pill good wrap" style={{ alignSelf: 'flex-start' }}>You hit {top} reps on every set last time. Try a little more weight.</p>}
               <div className="set-rows">
                 {Array.from({ length: count }, (_, s) => (
                   <div className="set-row" key={s}>

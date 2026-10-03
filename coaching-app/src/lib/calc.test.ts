@@ -7,6 +7,10 @@ import {
   emptyWeek,
   foodIndex,
   inferCycleDay,
+  isWorkout,
+  localDate,
+  mergeLibrary,
+  todayPosition,
   itemMacros,
   latestWeight,
   mround,
@@ -174,5 +178,61 @@ describe('links', () => {
     expect(safeHref('javascript:alert(1)')).toBeUndefined();
     expect(safeHref('data:text/html,hi')).toBeUndefined();
     expect(safeHref('')).toBeUndefined();
+  });
+});
+
+describe('fixes from the formula audit', () => {
+  it('rounds like Excel at 15 significant digits', () => {
+    expect(round(1.005, 2)).toBe(1.01);
+    expect(round(-1.005, 2)).toBe(-1.01);
+    expect(round(2.675, 2)).toBe(2.68);
+    expect(round(0.285, 2)).toBe(0.29);
+    expect(mround(1.25, 0.5)).toBe(1.5);
+  });
+
+  it('uses the first row when a food or exercise is listed twice (like VLOOKUP)', () => {
+    const dup: Food[] = [
+      { name: 'Cheddar Cheese', amount: 100, unit: 'g', kcal: 403, pro: 22.87, cho: 3.37, fat: 33.31, category: 'FAT' },
+      { name: 'cheddar cheese ', amount: 100, unit: 'g', kcal: 400, pro: 25, cho: 1.3, fat: 33.1, category: 'FAT' },
+    ];
+    const m = itemMacros({ id: 'a', food: 'Cheddar Cheese', qty: 30, swap: '' }, foodIndex(dup))!;
+    expect(m).toEqual({ pro: 7, cho: 1, fat: 10, kcal: 122 });
+    // Importing keeps the first of the incoming duplicates and replaces older entries.
+    const merged = mergeLibrary([{ ...dup[1], kcal: 1 }], dup);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].kcal).toBe(403);
+  });
+
+  it('treats swap units without case, and skips swaps for zero-calorie lines', () => {
+    const foods: Food[] = [
+      { name: 'Rice', amount: 100, unit: 'g', kcal: 130, pro: 2.7, cho: 28, fat: 0.3, category: 'CHO' },
+      { name: 'Oats', amount: 100, unit: 'G', kcal: 379, pro: 13, cho: 68, fat: 6.5, category: 'CHO' },
+      { name: 'Milk', amount: 100, unit: 'ML', kcal: 46, pro: 3.4, cho: 4.8, fat: 1.7, category: 'OTHER' },
+      { name: 'Water', amount: 100, unit: 'mL', kcal: 0, pro: 0, cho: 0, fat: 0, category: 'OTHER' },
+    ];
+    const idx = foodIndex(foods);
+    // 150 g rice = 4p/42c/0f = 184 kcal -> 100 * 184 / 379 = 48.5 -> 49 g (whole grams, not halves)
+    expect(swapQuantity({ id: 'a', food: 'Rice', qty: 150, swap: 'Oats' }, idx)).toEqual({ qty: 49, unit: 'G' });
+    expect(swapQuantity({ id: 'a', food: 'Rice', qty: 150, swap: 'Milk' }, idx)?.qty).toBe(400);
+    expect(swapQuantity({ id: 'a', food: 'Water', qty: 250, swap: 'Milk' }, idx)).toBeNull();
+  });
+
+  it('does not count rest days as workouts', () => {
+    expect(isWorkout('Day 1')).toBe(true);
+    expect(isWorkout('Rest day')).toBe(false);
+    expect(isWorkout('-')).toBe(false);
+    expect(aggregate('countWorkouts', ['Day 1', 'Rest day', undefined, 'Upper', '-'])).toBe(2);
+  });
+
+  it('knows when the program has not started yet', () => {
+    const p = todayPosition('2026-10-12', new Date(2026, 9, 3));
+    expect(p.beforeStart).toBe(true);
+    expect(todayPosition('2026-07-20', new Date(2026, 9, 3))).toMatchObject({ week: 11, day: 5, beforeStart: false });
+  });
+
+  it('shows timestamps on the local calendar day', () => {
+    const local = new Date(2026, 9, 3, 0, 30);
+    expect(localDate(local.toISOString())).toBe('2026-10-03');
+    expect(localDate(undefined)).toBe('');
   });
 });

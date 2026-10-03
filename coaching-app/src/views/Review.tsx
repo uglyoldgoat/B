@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../context';
 import { PHASES, SUMMARY_QUESTIONS, type TimelineWeek } from '../types';
-import { addDays, currentWeek, daysLogged, emptyWeek, formatDate, isNum, lastLoggedWeek, weekStart } from '../lib/calc';
+import { addDays, currentWeek, daysLogged, emptyWeek, formatDate, isNum, lastLoggedWeek, localDate, weekStart } from '../lib/calc';
 import { reviewRows, weekFlags, weekToReview } from '../lib/review';
 import { Block, NumInput, Select, TextArea, TextInput, signed } from '../components/ui';
 import { SendPackage } from '../components/exchange';
@@ -241,7 +241,7 @@ export function Review() {
             notify(m);
           }}
         />
-        {client.lastSentAt && <p className="small muted">Last sent {formatDate(client.lastSentAt.slice(0, 10), { weekday: 'short', day: 'numeric', month: 'short' })}.</p>}
+        {client.lastSentAt && <p className="small muted">Last sent {formatDate(localDate(client.lastSentAt), { weekday: 'short', day: 'numeric', month: 'short' })}.</p>}
       </section>
     </>
   );

@@ -3,7 +3,7 @@
 // side only overwrites the data it owns.
 
 import type { AppData, CheckInWeek, Client, Exercise, Food } from '../types';
-import { emptyWeek } from './calc';
+import { emptyWeek, mergeLibrary, toISODate } from './calc';
 
 export interface ClientUpdate {
   app: 'coachbook';
@@ -104,12 +104,6 @@ export function mergeSetupPack(target: Client, incoming: Client): void {
   for (const [id, logs] of Object.entries(incoming.logbook)) if (!target.logbook[id]) target.logbook[id] = logs;
 }
 
-function mergeLibrary<T extends { name: string }>(existing: T[], incoming: T[]): T[] {
-  const map = new Map(existing.map((x) => [x.name.trim().toLowerCase(), x]));
-  for (const x of incoming) map.set(x.name.trim().toLowerCase(), x);
-  return [...map.values()];
-}
-
 export type ApplyResult = { kind: 'update' | 'setup'; clientName: string; added: boolean; weeks: number };
 
 /** Apply a package to app data (an immer draft). `photoKeys` are the photos
@@ -145,7 +139,7 @@ export function applyPackage(d: AppData, pkg: Package, photoKeys: Set<string> = 
 /** Phones only share a few file types, so packages travel as .txt files. */
 export function packageFileName(client: Client, kind: Package['kind']): string {
   const who = (client.profile.name || 'client').replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'client';
-  const date = new Date().toISOString().slice(0, 10);
+  const date = toISODate(new Date());
   return kind === 'client-update' ? `${who}-checkin-${date}.txt` : `${who}-plan-${date}.txt`;
 }
 

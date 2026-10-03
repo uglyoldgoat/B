@@ -2,16 +2,10 @@ import { useRef, useState } from 'react';
 import { useApp } from '../context';
 import type { AppData, Exercise, Food } from '../types';
 import { blankClient } from '../lib/clients';
-import { formatDate, lastLoggedWeek, toISODate } from '../lib/calc';
+import { formatDate, lastLoggedWeek, localDate, mergeLibrary, toISODate } from '../lib/calc';
 import { deletePhoto, getPhoto, putPhoto, storageAvailable } from '../lib/store';
 import { importFile } from '../lib/importer';
 import { Block, ConfirmButton } from '../components/ui';
-
-function mergeByName<T extends { name: string }>(existing: T[], incoming: T[]): T[] {
-  const map = new Map(existing.map((x) => [x.name.trim().toLowerCase(), x]));
-  for (const x of incoming) map.set(x.name.trim().toLowerCase(), x);
-  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
-}
 
 function blobToDataUrl(b: Blob): Promise<string> {
   return new Promise((res, rej) => {
@@ -57,8 +51,8 @@ export function DataView() {
         d.clients = d.clients.filter((c) => !c.isSample);
         d.clients.push(r.client);
         d.activeClientId = r.client.id;
-        if (r.exercises.length) d.exercises = mergeByName<Exercise>(d.exercises, r.exercises);
-        if (r.foods.length) d.foods = mergeByName<Food>(d.foods, r.foods);
+        if (r.exercises.length) d.exercises = mergeLibrary<Exercise>(d.exercises, r.exercises);
+        if (r.foods.length) d.foods = mergeLibrary<Food>(d.foods, r.foods);
       });
       notify(`Imported ${r.client.profile.name || 'client'}: ${Object.keys(r.client.checkIns).length} weeks of check-ins, ${r.photos.length} photos`);
       go('overview');
@@ -122,8 +116,8 @@ export function DataView() {
         const ids = new Set(b.data.clients.map((c) => c.id));
         d.clients = [...d.clients.filter((c) => !ids.has(c.id) && !c.isSample), ...b.data.clients];
         d.activeClientId = b.data.activeClientId && ids.has(b.data.activeClientId) ? b.data.activeClientId : d.clients[0].id;
-        d.exercises = mergeByName(d.exercises, b.data.exercises ?? []);
-        d.foods = mergeByName(d.foods, b.data.foods ?? []);
+        d.exercises = mergeLibrary(d.exercises, b.data.exercises ?? []);
+        d.foods = mergeLibrary(d.foods, b.data.foods ?? []);
       });
       notify(`Restored ${b.data.clients.length} client(s)`);
     } catch (e) {
@@ -201,7 +195,7 @@ export function DataView() {
                   </td>
                   <td className="small">{c.profile.goal}</td>
                   <td className="n num">{lastLoggedWeek(c)}</td>
-                  <td className="small muted">{c.importedFrom ? `${c.importedFrom}, ${formatDate(c.importedAt?.slice(0, 10) ?? '')}` : c.isSample ? 'Made-up data' : 'Created here'}</td>
+                  <td className="small muted">{c.importedFrom ? `${c.importedFrom}, ${formatDate(localDate(c.importedAt))}` : c.isSample ? 'Made-up data' : 'Created here'}</td>
                   <td>
                     <div className="row" style={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
                       {c.id !== client.id && (

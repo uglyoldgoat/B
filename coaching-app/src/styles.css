@@ -1488,3 +1488,16 @@ table td.n {
   color: inherit;
   opacity: 0.85;
 }
+/* A pill that holds a sentence: allow it to wrap on narrow screens. */
+.pill.wrap {
+  white-space: normal;
+  border-radius: var(--r-sm);
+  padding: 4px 10px;
+  max-width: 100%;
+}
+/* No single-line pill may push a page wider than the screen. */
+.pill {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

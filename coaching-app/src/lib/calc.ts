@@ -19,12 +19,14 @@ import {
 
 // ---------------------------------------------------------------- numbers
 
-/** Excel ROUND: half away from zero. */
+/** Excel ROUND: half away from zero. Like Excel, the value is first taken to
+ * 15 significant digits, so 1.005 rounds to 1.01 even though its binary value
+ * is slightly below 1.005. */
 export function round(n: number, digits = 0): number {
+  if (!Number.isFinite(n)) return n;
   const f = 10 ** digits;
-  const x = Math.abs(n) * f;
-  // Nudge by a tiny epsilon so 1.005 rounds like Excel does.
-  const r = Math.round(x + 1e-9) / f;
+  const x = Number((Math.abs(n) * f).toPrecision(15));
+  const r = Math.round(x) / f;
   return n < 0 ? -r : r;
 }
 
@@ -53,6 +55,13 @@ export function parseDate(s: string): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || '');
   if (!m) return null;
   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
+/** Local calendar date (YYYY-MM-DD) of an ISO timestamp, for display. */
+export function localDate(timestamp: string | undefined): string {
+  if (!timestamp) return '';
+  const d = new Date(timestamp);
+  return Number.isNaN(d.getTime()) ? '' : toISODate(d);
 }
 
 export function toISODate(d: Date): string {
@@ -183,6 +192,11 @@ export function isRealEntry(v: unknown): boolean {
   return s !== '' && !NOT_AN_ENTRY.test(s);
 }
 
+/** A logged training session ("Rest day" and "-" are not workouts). */
+export function isWorkout(v: unknown): boolean {
+  return isRealEntry(v) && !/^(rest|off)\b/i.test(String(v).trim());
+}
+
 export type SummaryValue = number | string | null;
 
 export function aggregate(agg: Agg, values: unknown[]): SummaryValue {
@@ -213,6 +227,8 @@ export function aggregate(agg: Agg, values: unknown[]): SummaryValue {
         : null;
     case 'countText':
       return values.some((v) => v !== undefined && v !== null && v !== '') ? values.filter(isRealEntry).length : null;
+    case 'countWorkouts':
+      return values.some((v) => v !== undefined && v !== null && v !== '') ? values.filter(isWorkout).length : null;
     case 'avgHours': {
       const a = average(values);
       return a === null ? null : round(a, 2);
@@ -323,12 +339,34 @@ export interface Macros {
 
 export const ZERO: Macros = { kcal: 0, pro: 0, cho: 0, fat: 0 };
 
+const libKey = (name: string) => name.trim().toLowerCase();
+
+/** Name lookup that works like the sheet's VLOOKUP(…, FALSE): case doesn't
+ * matter and, when a name is listed twice, the first row wins. */
+function firstWins<T extends { name: string }>(rows: T[]): Map<string, T> {
+  const m = new Map<string, T>();
+  for (const r of rows) {
+    const k = libKey(r.name);
+    if (!m.has(k)) m.set(k, r);
+  }
+  return m;
+}
+
+/** Add library entries from an import or a coach's file. Incoming entries
+ * replace existing ones with the same name; within each list the first entry
+ * for a name wins, as in the spreadsheet. */
+export function mergeLibrary<T extends { name: string }>(existing: T[], incoming: T[]): T[] {
+  const map = firstWins(existing);
+  for (const [k, v] of firstWins(incoming)) map.set(k, v);
+  return [...map.values()];
+}
+
 export function foodIndex(foods: Food[]): Map<string, Food> {
-  return new Map(foods.map((f) => [f.name.trim().toLowerCase(), f]));
+  return firstWins(foods);
 }
 
 export function findFood(index: Map<string, Food>, name: string): Food | undefined {
-  return index.get(name.trim().toLowerCase());
+  return index.get(libKey(name));
 }
 
 /** Macros for one meal-plan line. Each macro is ROUND((qty/serving)*macro, 0)
@@ -367,16 +405,19 @@ export function swapQuantity(item: FoodItem, index: Map<string, Food>): { qty: n
   if (!item.swap) return null;
   const alt = findFood(index, item.swap);
   const m = itemMacros(item, index);
-  if (!alt || !m || !alt.kcal) return null;
+  // The sheet shows nothing when the line has no calories or the swap has none.
+  if (!alt || !m || !m.kcal || !alt.kcal) return null;
   const raw = (alt.amount * m.kcal) / alt.kcal;
-  const grams = alt.unit === 'g' || alt.unit === 'mL';
+  // Excel's = comparison ignores case, so "G" and "ml" count too.
+  const unit = alt.unit.trim().toLowerCase();
+  const grams = unit === 'g' || unit === 'ml';
   return { qty: grams ? round(raw) : mround(raw, 0.5), unit: alt.unit };
 }
 
 // ---------------------------------------------------------------- training
 
 export function exerciseIndex(exercises: Exercise[]): Map<string, Exercise> {
-  return new Map(exercises.map((e) => [e.name.trim().toLowerCase(), e]));
+  return firstWins(exercises);
 }
 
 /** Weekly working sets per body part. An exercise counts its sets toward both
@@ -446,11 +487,12 @@ export function num(v: Num | undefined, digits = 0): string {
   return v.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
 }
 
-/** Where today falls in the program: week number and Monday-first day index. */
-export function todayPosition(week1Date: string, today = new Date()): { week: number; day: number; iso: string } {
+/** Where today falls in the program: week number and Monday-first day index.
+ * `beforeStart` is true when the program hasn't started yet. */
+export function todayPosition(week1Date: string, today = new Date()): { week: number; day: number; iso: string; beforeStart: boolean } {
   const week = currentWeek(week1Date, today) ?? 1;
   const d = daysBetween(weekStart(week1Date, week), today) ?? 0;
-  return { week, day: Math.min(6, Math.max(0, d)), iso: toISODate(today) };
+  return { week, day: Math.min(6, Math.max(0, d)), iso: toISODate(today), beforeStart: d < 0 };
 }
 
 /** Most recent coach feedback, newest week first. */

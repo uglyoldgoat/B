@@ -2,7 +2,7 @@
 // and writes the things a coach would look for as short flags.
 
 import type { Client, Food } from '../types';
-import { dayMacros, daysLogged, foodIndex, formatHours, isNum, isRealEntry, num, summarizeWeek, type WeekSummary } from './calc';
+import { dayMacros, daysLogged, foodIndex, formatHours, isNum, isWorkout, num, summarizeWeek, type WeekSummary } from './calc';
 import { nutritionSchedule, trainingSchedule } from './schedule';
 
 export type Tone = 'good' | 'warn' | 'info';
@@ -48,20 +48,26 @@ export function weekTargets(client: Client, week: number, foods: Food[]): WeekTa
   let protein: number | null = null;
   let water: number | null = null;
   const scheduled = sched.map((id) => client.nutritionDays.find((d) => d.id === id));
-  if (scheduled.every(Boolean)) {
+  const fullSchedule = scheduled.every(Boolean);
+  if (fullSchedule) {
     const m = scheduled.map((d) => dayMacros(d!, idx));
-    const avgK = Math.round(m.reduce((a, x) => a + x.kcal, 0) / 7);
-    kcal = { min: avgK, max: avgK };
     protein = Math.round(m.reduce((a, x) => a + x.pro, 0) / 7);
     const w = scheduled.map((d) => d!.water).filter(isNum);
     water = w.length ? Math.round((w.reduce((a, b) => a + b, 0) / w.length) * 10) / 10 : null;
   } else {
-    const set = tl ? [tl.intakeHigh, tl.intakeMed, tl.intakeLow].filter(isNum) : [];
-    const planK = plans.map((d) => dayMacros(d, idx).kcal).filter((k) => k > 0);
-    const src = set.length ? set : planK;
-    if (src.length) kcal = { min: Math.min(...src), max: Math.max(...src) };
     const planP = plans.map((d) => dayMacros(d, idx).pro).filter((p) => p > 0);
     if (planP.length) protein = Math.min(...planP);
+  }
+  // Calories: the coach's targets for that week come first, then the average
+  // of the scheduled meal-plan days, then the range of the current plans.
+  const set = tl ? [tl.intakeHigh, tl.intakeMed, tl.intakeLow].filter(isNum) : [];
+  if (set.length) kcal = { min: Math.min(...set), max: Math.max(...set) };
+  else if (fullSchedule) {
+    const avgK = Math.round(scheduled.reduce((a, d) => a + dayMacros(d!, idx).kcal, 0) / 7);
+    kcal = { min: avgK, max: avgK };
+  } else {
+    const planK = plans.map((d) => dayMacros(d, idx).kcal).filter((k) => k > 0);
+    if (planK.length) kcal = { min: Math.min(...planK), max: Math.max(...planK) };
   }
   return {
     steps: tl?.steps ?? client.profile.stepsTarget,
@@ -74,7 +80,7 @@ export function weekTargets(client: Client, week: number, foods: Food[]): WeekTa
 }
 
 function sessionsDone(client: Client, week: number): number {
-  return (client.checkIns[week]?.days ?? []).filter((d) => isRealEntry(d.session) && !/^rest/i.test(String(d.session))).length;
+  return (client.checkIns[week]?.days ?? []).filter((d) => isWorkout(d.session)).length;
 }
 
 function weighIns(client: Client, week: number): number {

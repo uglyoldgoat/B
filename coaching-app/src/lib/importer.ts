@@ -559,6 +559,25 @@ export function importWorkbook(wb: ExcelJS.Workbook, fileName = ''): ImportResul
   const foods = readFoods(sheet(wb, 'Nutrition Database'));
   const photoData = readPhotos(wb, sheet(wb, 'Photos'));
 
+  // Names listed twice with different values: like VLOOKUP, the first row is used.
+  const dupNote = <T extends { name: string }>(rows: T[], where: string, same: (a: T, b: T) => boolean) => {
+    const first = new Map<string, T>();
+    const clash = new Set<string>();
+    for (const r of rows) {
+      const k = r.name.trim().toLowerCase();
+      const f = first.get(k);
+      if (!f) first.set(k, r);
+      else if (!same(f, r)) clash.add(f.name);
+    }
+    if (clash.size) {
+      notes.push(
+        `${where}: ${[...clash].map((n) => `"${n}"`).join(', ')} ${clash.size === 1 ? 'is' : 'are'} listed twice with different values. Like the spreadsheet, the app uses the first one. Delete or rename the other in the Library.`,
+      );
+    }
+  };
+  dupNote(foods, 'Nutrition Database', (a, b) => a.amount === b.amount && a.unit === b.unit && a.kcal === b.kcal && a.pro === b.pro && a.cho === b.cho && a.fat === b.fat);
+  dupNote(exercises, 'Exercise Database', (a, b) => a.primary === b.primary && a.secondary === b.secondary);
+
   const timelineDate = toDate(cellRaw(sheet(wb, 'Timeline'), 8, 3));
   const week1Date = check.week1Date || timelineDate || profile.coachingStart;
 

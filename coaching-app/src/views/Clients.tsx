@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useApp } from '../context';
 import type { Client } from '../types';
-import { currentWeek, daysLogged, formatDate, isNum, latestWeight, num, summarizeWeek } from '../lib/calc';
+import { currentWeek, daysLogged, formatDate, isNum, latestWeight, localDate, mergeLibrary, num, summarizeWeek } from '../lib/calc';
 import { blankClient } from '../lib/clients';
 import { importFile } from '../lib/importer';
 import { putPhoto } from '../lib/store';
@@ -73,13 +73,8 @@ export function Clients() {
         d.clients = d.clients.filter((c) => !c.isSample);
         d.clients.push(r.client);
         d.activeClientId = r.client.id;
-        const merge = <T extends { name: string }>(a: T[], b: T[]) => {
-          const m = new Map(a.map((x) => [x.name.toLowerCase(), x]));
-          for (const x of b) m.set(x.name.toLowerCase(), x);
-          return [...m.values()];
-        };
-        if (r.exercises.length) d.exercises = merge(d.exercises, r.exercises);
-        if (r.foods.length) d.foods = merge(d.foods, r.foods);
+        if (r.exercises.length) d.exercises = mergeLibrary(d.exercises, r.exercises);
+        if (r.foods.length) d.foods = mergeLibrary(d.foods, r.foods);
       });
       notify(`Imported ${r.client.profile.name || 'client'}`);
       go('overview');
@@ -205,7 +200,7 @@ export function Clients() {
                 <button className="btn small" onClick={() => open(c.id, 'overview')}>
                   Open
                 </button>
-                {c.importedFrom && <span className="small muted">From {c.importedFrom}, {formatDate(c.importedAt?.slice(0, 10) ?? '')}</span>}
+                {c.importedFrom && <span className="small muted">From {c.importedFrom}, {formatDate(localDate(c.importedAt))}</span>}
               </div>
             </section>
           ))}

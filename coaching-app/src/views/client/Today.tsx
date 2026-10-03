@@ -10,7 +10,7 @@ export function Today() {
   const { client, data, go, notify, preview, updateClient } = useApp();
   const p = client.profile;
   const now = new Date();
-  const { week, day } = todayPosition(client.week1Date, now);
+  const { week, day, beforeStart } = todayPosition(client.week1Date, now);
   const wd = (now.getDay() + 6) % 7;
   const wk = client.checkIns[week];
   const entry = wk?.days[day] ?? {};
@@ -70,8 +70,15 @@ export function Today() {
         </section>
       )}
 
+      {beforeStart && (
+        <section className="card highlight stack" style={{ gap: 6 }}>
+          <h2>Your program starts {formatDate(client.week1Date, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
+          <p className="ink2">Look around your workouts and meals now. Daily logging opens on the first day.</p>
+        </section>
+      )}
+
       <div className="grid two">
-        <section className="card stack" style={{ gap: 10 }}>
+        <section className="card stack" style={{ gap: 10 }} hidden={beforeStart}>
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <h2>Today's log</h2>
             <span className={`pill ${doneCount === DAILY_ESSENTIALS.length ? 'good' : ''}`}>

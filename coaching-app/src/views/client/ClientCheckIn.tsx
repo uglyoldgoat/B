@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../../context';
-import { CHECKIN_FIELDS, SUMMARY_QUESTIONS, type DayEntry, type FieldDef } from '../../types';
-import { addDays, emptyWeek, formatDate, inferCycleDay, todayPosition, weekStart } from '../../lib/calc';
+import { CHECKIN_FIELDS, SUMMARY_QUESTIONS, WEEKDAYS, type DayEntry, type FieldDef } from '../../types';
+import { addDays, emptyWeek, formatDate, inferCycleDay, localDate, todayPosition, weekStart } from '../../lib/calc';
 import { BRISTOL_WORDS, CLIENT_HELP, DAILY_ESSENTIALS, SCALE_WORDS } from '../../lib/explain';
 import { shortDayTitle } from '../../lib/schedule';
 import { Choice, NumInput, Scale, TextArea, TextInput } from '../../components/ui';
@@ -169,7 +169,7 @@ export function ClientCheckIn() {
         </>
       )}
 
-      <section className={`card stack ${client.profile.checkInDay && formatDate(today.iso, { weekday: 'long' }) === client.profile.checkInDay ? 'highlight' : ''}`} style={{ gap: 14 }}>
+      <section className={`card stack ${client.profile.checkInDay === WEEKDAYS[(new Date().getDay() + 6) % 7] ? 'highlight' : ''}`} style={{ gap: 14 }}>
         <div>
           <h2>Weekly check-in</h2>
           <p className="small ink2">
@@ -227,7 +227,7 @@ export function ClientCheckIn() {
             }}
           />
         )}
-        {client.lastSentAt && <p className="small muted">Last sent {formatDate(client.lastSentAt.slice(0, 10), { weekday: 'short', day: 'numeric', month: 'short' })}.</p>}
+        {client.lastSentAt && <p className="small muted">Last sent {formatDate(localDate(client.lastSentAt), { weekday: 'short', day: 'numeric', month: 'short' })}.</p>}
       </section>
     </>
   );

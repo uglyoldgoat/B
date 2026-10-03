@@ -81,12 +81,23 @@ The hidden PEDs sheet is not imported.
 - Training volume: each exercise's sets count toward its primary and secondary
   body part.
 - Current week: `ROUNDUP((today + 1 − week-1 start) / 7)`.
+- Rounding works like Excel's `ROUND` (half away from zero, at 15 significant
+  digits), and `MROUND` for swaps.
+- Food and exercise names are looked up like `VLOOKUP(…, FALSE)`: case doesn't
+  matter, and if a name is listed twice the first row is used. The import
+  warns when duplicates have different values.
+
+`src/lib/formulas.test.ts` checks this cell by cell against the values the
+spreadsheet calculated: every weekly check-in average for all 52 weeks, every
+meal-plan line, swap, meal total and day total on all three meal-plan sheets,
+and the Timeline columns (2,146 values for the sample client file).
 
 A few spreadsheet behaviours were corrected on purpose:
 
 - Bedtimes are averaged as clock times, so 23:30 and 00:30 average to 00:00
   (the sheet's plain average gives 12:00).
-- "No" and "-" are not counted as a craving or a digestive issue.
+- "No" and "-" are not counted as a craving or a digestive issue, and "Rest
+  day" is not counted as a workout.
 - The weekly weight change is left blank when the previous week has no
   weigh-ins (the sheet subtracted zero and showed the full bodyweight).
 - Week numbers count from the first check-in week everywhere.
@@ -107,8 +118,8 @@ To check the importer against a real client workbook (never commit it):
 COACH_XLSX=/path/to/client.xlsx npm test
 ```
 
-That test compares the app's weekly averages, current weight, meal-plan totals
-and training volume against the values cached in the workbook.
+Those tests compare the app's numbers with the values cached in the workbook
+(see Calculations above).
 
 ## Deploying
 
