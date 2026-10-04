@@ -4,7 +4,7 @@ import { WEEKDAYS, type Client, type LoggedSet, type ProgramDay } from '../../ty
 import { emptyWeek, exerciseIndex, hasSets, isNum, letter, num, safeHref, todayPosition } from '../../lib/calc';
 import { describeFeeder, describeRest, describeRir, describeSets, describeTechnique, describeTempo, topReps } from '../../lib/explain';
 import { sessionOn, shortDayTitle, trainingSchedule } from '../../lib/schedule';
-import { Empty, NumInput } from '../../components/ui';
+import { Empty, NumInput, Picker } from '../../components/ui';
 
 function sessionsLogged(client: Client, day: ProgramDay): number {
   let n = 0;
@@ -93,17 +93,7 @@ export function Workout() {
       </div>
 
       {client.program.length > 1 && (
-        <div className="seg big" role="group" aria-label="Workout" style={{ alignSelf: 'flex-start' }}>
-          {client.program.map((d) => {
-            const days = daysFor(d.id);
-            return (
-              <button key={d.id} aria-pressed={d.id === day.id} onClick={() => pickDay(d.id)}>
-                {shortDayTitle(d.title)}
-                {days.length > 0 && <span className="muted small"> · {days.join(', ')}</span>}
-              </button>
-            );
-          })}
-        </div>
+        <Picker label="Workout" value={day.id} onChange={pickDay} options={client.program.map((d) => ({ id: d.id, label: shortDayTitle(d.title), sub: daysFor(d.id).join(', ') || undefined }))} />
       )}
 
       <div className="stack" style={{ gap: 14 }}>

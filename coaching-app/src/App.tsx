@@ -1,62 +1,53 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { produce } from 'immer';
 import { Ctx, type AppCtx } from './context';
 import type { AppData, Client, Mode } from './types';
 import { loadData, saveData } from './lib/store';
-import { Icon } from './components/icons';
-import { Welcome } from './views/Welcome';
-// Coach screens
-import { Clients } from './views/Clients';
-import { Dashboard } from './views/Dashboard';
-import { Review } from './views/Review';
-import { CheckIn } from './views/CheckIn';
-import { Timeline } from './views/Timeline';
-import { Training } from './views/Training';
-import { Logbook } from './views/Logbook';
-import { Nutrition } from './views/Nutrition';
-import { Photos } from './views/Photos';
-import { Supplements } from './views/Supplements';
-import { Library } from './views/Library';
-import { DataView } from './views/DataView';
-// Client screens
-import { Today } from './views/client/Today';
-import { ClientCheckIn } from './views/client/ClientCheckIn';
-import { Workout } from './views/client/Workout';
-import { Meals } from './views/client/Meals';
-import { Progress } from './views/client/Progress';
-import { More } from './views/client/More';
+import { BrandMark, Icon } from './components/icons';
+
+// Screens load in two chunks: a client's phone only downloads the client screens.
+const coach = () => import('./views/coach');
+const clientScreens = () => import('./views/client');
+type Screens = Record<string, ComponentType>;
+const screen = (load: () => Promise<unknown>, name: string) =>
+  lazy(() => load().then((m) => ({ default: (m as Screens)[name] })));
+const Welcome = lazy(() => import('./views/Welcome').then((m) => ({ default: m.Welcome })));
 
 interface Tab {
   id: string;
   label: string;
   View: ComponentType;
-  icon?: string;
-  /** Shown before the client was chosen (not tied to the active client). */
+  icon: string;
+  /** Not tied to the active client. */
   global?: boolean;
 }
 
 const COACH_TABS: Tab[] = [
-  { id: 'clients', label: 'All clients', View: Clients, global: true },
-  { id: 'overview', label: 'Overview', View: Dashboard },
-  { id: 'review', label: 'Weekly review', View: Review },
-  { id: 'checkin', label: 'Check-ins', View: CheckIn },
-  { id: 'timeline', label: 'Timeline', View: Timeline },
-  { id: 'training', label: 'Training', View: Training },
-  { id: 'logbook', label: 'Logbook', View: Logbook },
-  { id: 'nutrition', label: 'Meal plan', View: Nutrition },
-  { id: 'photos', label: 'Photos', View: Photos },
-  { id: 'supplements', label: 'Supplements', View: Supplements },
-  { id: 'library', label: 'Library', View: Library, global: true },
-  { id: 'data', label: 'Settings', View: DataView, global: true },
+  { id: 'clients', label: 'All clients', View: screen(coach, 'Clients'), icon: 'clients', global: true },
+  { id: 'overview', label: 'Overview', View: screen(coach, 'Dashboard'), icon: 'overview' },
+  { id: 'review', label: 'Weekly review', View: screen(coach, 'Review'), icon: 'review' },
+  { id: 'checkin', label: 'Check-ins', View: screen(coach, 'CheckIn'), icon: 'checkin' },
+  { id: 'timeline', label: 'Timeline', View: screen(coach, 'Timeline'), icon: 'timeline' },
+  { id: 'training', label: 'Training', View: screen(coach, 'Training'), icon: 'training' },
+  { id: 'logbook', label: 'Logbook', View: screen(coach, 'Logbook'), icon: 'logbook' },
+  { id: 'nutrition', label: 'Meal plan', View: screen(coach, 'Nutrition'), icon: 'nutrition' },
+  { id: 'photos', label: 'Photos', View: screen(coach, 'Photos'), icon: 'photos' },
+  { id: 'supplements', label: 'Supplements', View: screen(coach, 'Supplements'), icon: 'supplements' },
+  { id: 'library', label: 'Library', View: screen(coach, 'Library'), icon: 'library', global: true },
+  { id: 'data', label: 'Settings', View: screen(coach, 'DataView'), icon: 'data', global: true },
 ];
 
+/** On phones the coach gets these four in the bottom bar; the rest sit under More. */
+const COACH_PRIMARY = ['clients', 'overview', 'review', 'checkin'];
+const COACH_SHORT: Record<string, string> = { clients: 'Clients', review: 'Review' };
+
 const CLIENT_TABS: Tab[] = [
-  { id: 'today', label: 'Today', View: Today, icon: 'today' },
-  { id: 'log', label: 'Check-in', View: ClientCheckIn, icon: 'log' },
-  { id: 'workout', label: 'Workout', View: Workout, icon: 'workout' },
-  { id: 'meals', label: 'Meals', View: Meals, icon: 'meals' },
-  { id: 'progress', label: 'Progress', View: Progress, icon: 'progress' },
-  { id: 'more', label: 'More', View: More, icon: 'more' },
+  { id: 'today', label: 'Today', View: screen(clientScreens, 'Today'), icon: 'today' },
+  { id: 'log', label: 'Check-in', View: screen(clientScreens, 'ClientCheckIn'), icon: 'log' },
+  { id: 'workout', label: 'Workout', View: screen(clientScreens, 'Workout'), icon: 'workout' },
+  { id: 'meals', label: 'Meals', View: screen(clientScreens, 'Meals'), icon: 'meals' },
+  { id: 'progress', label: 'Progress', View: screen(clientScreens, 'Progress'), icon: 'progress' },
+  { id: 'more', label: 'More', View: screen(clientScreens, 'More'), icon: 'more' },
 ];
 
 const ALIASES: Record<string, string> = { dashboard: 'overview' };
@@ -66,6 +57,14 @@ function hashTab(): string {
   return ALIASES[h] ?? h;
 }
 
+function Loading() {
+  return (
+    <div className="loading" role="status">
+      <span className="sr-only">Loading…</span>
+    </div>
+  );
+}
+
 export default function App() {
   const [data, setData] = useState<AppData | null>(null);
   const [firstRun, setFirstRun] = useState(false);
@@ -73,6 +72,7 @@ export default function App() {
   const [preview, setPreviewState] = useState(false);
   const [toast, setToast] = useState('');
   const loaded = useRef(false);
+  const sheet = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     let alive = true;
@@ -114,6 +114,7 @@ export default function App() {
 
   const go = useCallback((id: string) => {
     setTab(id);
+    sheet.current?.close();
     try {
       history.replaceState(null, '', `#${id}`);
     } catch {
@@ -154,106 +155,177 @@ export default function App() {
 
   if (firstRun && !data) {
     return (
-      <Welcome
-        onStart={(d) => {
-          setData(d);
-          setFirstRun(false);
-          go(d.mode === 'client' ? 'today' : 'clients');
-        }}
-      />
+      <Suspense fallback={<Loading />}>
+        <Welcome
+          onStart={(d) => {
+            setData(d);
+            setFirstRun(false);
+            go(d.mode === 'client' ? 'today' : 'clients');
+          }}
+        />
+      </Suspense>
     );
   }
-  if (!ctx || !client || !data) {
-    return (
-      <main>
-        <p className="muted">Loading…</p>
-      </main>
-    );
-  }
+  if (!ctx || !client || !data) return <Loading />;
 
   const clientView = mode === 'client' || preview;
+  const coachView = !clientView;
   const tabs = clientView ? CLIENT_TABS : COACH_TABS;
   const active = tabs.find((t) => t.id === tab) ?? tabs[0];
   const Active = active.View;
+  const firstName = client.profile.name.split(' ')[0] || 'Client';
+  const bottom = coachView ? COACH_TABS.filter((t) => COACH_PRIMARY.includes(t.id)) : CLIENT_TABS;
+  const inMore = coachView && !COACH_PRIMARY.includes(active.id);
 
   return (
     <Ctx.Provider value={ctx}>
-      <header className="appbar">
+      <header className={`appbar ${clientView ? 'is-client' : 'is-coach'}`}>
         <div className="appbar-inner">
           <div className="appbar-top">
-            <div className="brand">
+            <div className={`brand ${coachView || preview ? 'compact' : ''}`}>
+              <BrandMark />
               <span className="brand-mark">
                 Coach<span>book</span>
               </span>
             </div>
-            {mode === 'coach' && !preview && (
+            {coachView && (
               <>
-                <label className="sr-only" htmlFor="client-select">
-                  Client
+                <label className="switcher">
+                  <span className="sr-only">Client</span>
+                  <select
+                    value={client.id}
+                    onChange={(e) => {
+                      update((d) => {
+                        d.activeClientId = e.target.value;
+                      });
+                      if (active.global && active.id !== 'library') go('overview');
+                    }}
+                  >
+                    {data.clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.profile.name || 'Unnamed client'}
+                        {c.isSample ? ' (sample)' : ''}
+                      </option>
+                    ))}
+                  </select>
                 </label>
-                <select
-                  id="client-select"
-                  style={{ width: 'auto', maxWidth: '46vw' }}
-                  value={client.id}
-                  onChange={(e) => {
-                    update((d) => {
-                      d.activeClientId = e.target.value;
-                    });
-                    if (active.global && active.id !== 'library') go('overview');
-                  }}
-                >
-                  {data.clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.profile.name || 'Unnamed client'}
-                      {c.isSample ? ' (sample)' : ''}
-                    </option>
-                  ))}
-                </select>
-                <button className="btn small" onClick={() => setPreview(true)} title="See the app the way this client sees it">
-                  Client view
+                <button className="btn small preview-btn" onClick={() => setPreview(true)} title="See the app the way this client sees it">
+                  <Icon name="eye" size={18} />
+                  <span>Client view</span>
                 </button>
               </>
             )}
-            {clientView && <span className="ink2 small">{client.profile.name}</span>}
+            {preview && (
+              <div className="preview-bar">
+                <span className="small">
+                  <b>{firstName}</b>’s app
+                </span>
+                <button className="btn small primary" onClick={() => setPreview(false)}>
+                  Exit preview
+                </button>
+              </div>
+            )}
+            {mode === 'client' && <span className="who">{client.profile.name}</span>}
           </div>
-          <nav className={`tabs ${clientView ? 'client-tabs' : ''}`} aria-label="Sections">
+          <nav className="tabs rail" aria-label="Sections">
             {tabs.map((t, i) => (
               <button
                 key={t.id}
-                className={`tab ${!clientView && i > 0 && t.global && !tabs[i - 1].global ? 'tab-sep' : ''}`}
+                className={`tab ${coachView && i > 0 && t.global && !tabs[i - 1].global ? 'tab-sep' : ''}`}
                 aria-current={t.id === active.id ? 'page' : undefined}
                 onClick={() => go(t.id)}
               >
-                {t.icon && <Icon name={t.icon} />}
+                {clientView && <Icon name={t.icon} size={18} />}
                 <span>{t.label}</span>
               </button>
             ))}
           </nav>
         </div>
       </header>
-      <main key={`${client.id}-${active.id}-${clientView}`} className={clientView ? 'client-main' : undefined}>
-        {preview && (
+
+      <main key={`${client.id}-${active.id}-${clientView}`} className={clientView ? 'client-main' : 'coach-main'}>
+        {coachView && client.isSample && (active.id === 'clients' || active.id === 'overview') && (
           <div className="banner info">
             <span className="grow">
-              You're seeing the app the way <b>{client.profile.name || 'this client'}</b> sees it on their phone.
+              <b>Sample client</b> with made-up data. Import a client's workbook to start for real.
             </span>
-            <button className="btn primary small" onClick={() => setPreview(false)}>
-              Back to coach view
-            </button>
+            {active.id !== 'clients' && (
+              <button className="btn primary small" onClick={() => go('clients')}>
+                Add a client
+              </button>
+            )}
           </div>
         )}
-        {mode === 'coach' && !preview && client.isSample && active.id !== 'data' && (
-          <div className="banner info">
-            <span className="grow">
-              This is a <b>sample client</b> with made-up data. Import a client's workbook to start for real.
-            </span>
-            <button className="btn primary small" onClick={() => go('clients')}>
-              Add a client
-            </button>
-          </div>
-        )}
-        <Active />
+        <Suspense fallback={<Loading />}>
+          <Active />
+        </Suspense>
       </main>
+
+      <nav className={`bottom-nav cols-${bottom.length + (coachView ? 1 : 0)}`} aria-label="Sections">
+        {bottom.map((t) => (
+          <button key={t.id} className="tab" aria-current={t.id === active.id ? 'page' : undefined} onClick={() => go(t.id)}>
+            <Icon name={t.icon} />
+            <span>{COACH_SHORT[t.id] ?? t.label}</span>
+          </button>
+        ))}
+        {coachView && (
+          <button className="tab" aria-current={inMore ? 'page' : undefined} aria-haspopup="dialog" onClick={() => sheet.current?.showModal()}>
+            <Icon name="menu" />
+            <span>{inMore ? active.label : 'More'}</span>
+          </button>
+        )}
+      </nav>
+
+      {coachView && (
+        <dialog
+          ref={sheet}
+          className="sheet"
+          aria-label="All sections"
+          onClick={(e) => {
+            // A tap on the dimmed backdrop closes the sheet.
+            if (e.target === e.currentTarget) sheet.current?.close();
+          }}
+        >
+          <div className="sheet-body">
+            <div className="sheet-head">
+              <div>
+                <div className="eyebrow">{client.profile.name || 'Unnamed client'}</div>
+                <h2>Sections</h2>
+              </div>
+              <button className="icon-btn" aria-label="Close" onClick={() => sheet.current?.close()}>
+                <Icon name="close" />
+              </button>
+            </div>
+            <div className="sheet-grid">
+              {COACH_TABS.filter((t) => !COACH_PRIMARY.includes(t.id) && !t.global).map((t) => (
+                <button key={t.id} className="sheet-item" aria-current={t.id === active.id ? 'page' : undefined} onClick={() => go(t.id)}>
+                  <Icon name={t.icon} />
+                  <span>{t.label}</span>
+                </button>
+              ))}
+            </div>
+            <div className="sheet-grid">
+              {COACH_TABS.filter((t) => !COACH_PRIMARY.includes(t.id) && t.global).map((t) => (
+                <button key={t.id} className="sheet-item" aria-current={t.id === active.id ? 'page' : undefined} onClick={() => go(t.id)}>
+                  <Icon name={t.icon} />
+                  <span>{t.label}</span>
+                </button>
+              ))}
+              <button
+                className="sheet-item"
+                onClick={() => {
+                  sheet.current?.close();
+                  setPreview(true);
+                }}
+              >
+                <Icon name="eye" />
+                <span>Client view</span>
+              </button>
+            </div>
+          </div>
+        </dialog>
+      )}
+
       {toast && (
         <div className="toast" role="status">
           {toast}

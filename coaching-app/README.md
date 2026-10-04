@@ -19,7 +19,18 @@ On first open the app asks who uses the device.
   tempo and RIR are written out ("3 s down, 1 s pause, 1 s up", "stop when you
   could do about 2 more reps"), and only nine daily items are required.
 
-The coach can press **Client view** to see exactly what a client sees.
+The coach can press **Client view** (the eye button) to see exactly what a client sees.
+
+### On phones
+
+Both roles get a bottom tab bar. The coach's bar holds All clients, Overview,
+Weekly review and Check-ins; **More** opens every other section. Controls are at
+least 40px tall on touch screens, fields use 16px text so iPhones don't zoom in,
+and wide tables scroll sideways with the first column pinned.
+
+Hosted as a website (see Deploying), the app can be added to the home screen and
+opens without a connection after the first visit: a service worker saves the
+app's files. Data was already stored on the device.
 
 ### Keeping coach and client in sync (no server)
 
@@ -124,7 +135,13 @@ Those tests compare the app's numbers with the values cached in the workbook
 ## Deploying
 
 `npm run build` produces a static site in `dist/` that can be served from any
-static host (GitHub Pages, Netlify, Cloudflare Pages, S3). There is no server.
+static host over HTTPS (GitHub Pages, Netlify, Cloudflare Pages, S3). There is
+no server. The build also writes `dist/sw.js` (from `sw.template.js`) with the
+list of this build's files, for offline use.
+
+The screens load in two chunks, so a client's phone never downloads the coach
+screens, and the spreadsheet importer (ExcelJS) only loads when a coach imports
+a workbook.
 
 ## Limitations
 

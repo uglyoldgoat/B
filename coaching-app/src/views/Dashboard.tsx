@@ -12,13 +12,15 @@ import {
   isNum,
   lastLoggedWeek,
   latestWeight,
+  loggedDays,
   num,
   summarizeWeek,
   timeUntil,
+  todayPosition,
   weekStart,
   weeklyRows,
 } from '../lib/calc';
-import { Block, Field, NumInput, Select, Stat, TextArea, TextInput, deltaTone, signed } from '../components/ui';
+import { Block, Field, NumInput, Select, Stat, TextArea, TextInput, Ticks, deltaTone, signed, weekLetters } from '../components/ui';
 import { WeightChart } from '../components/progress';
 import { nutritionSchedule, shortDayTitle, trainingSchedule } from '../lib/schedule';
 import { phaseDirection } from '../lib/review';
@@ -107,8 +109,8 @@ export function Dashboard() {
           sub={isNum(p.startWeightKg) && latest ? `Start ${num(p.startWeightKg, 1)} kg · ${signed(latest.kg - p.startWeightKg, 1, ' kg')} total` : undefined}
         />
         <Stat label={`This week's check-in`} value={`${logged}/7`} unit="days" sub={thisWeek?.complete ? 'Marked complete' : `Week of ${formatDate(weekStart(client.week1Date, week))}`}>
-          <div className="meter">
-            <span style={{ width: `${(logged / 7) * 100}%` }} />
+          <div style={{ marginTop: 6 }}>
+            <Ticks on={loggedDays(thisWeek)} marks={weekLetters(client.week1Date)} current={todayPosition(client.week1Date).week === week ? todayPosition(client.week1Date).day : undefined} label={`${logged} of 7 days logged`} />
           </div>
           <button className="btn small" style={{ marginTop: 8, alignSelf: 'flex-start' }} onClick={() => go('checkin')}>
             Open check-in

@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { useApp } from '../../context';
 import { WEEKDAYS } from '../../types';
-import { dayMacros, daysLogged, foodIndex, formatDate, isNum, latestFeedback, num, summarizeWeek, toISODate, todayPosition } from '../../lib/calc';
+import { dayMacros, daysLogged, foodIndex, formatDate, isNum, latestFeedback, loggedDays, num, summarizeWeek, toISODate, todayPosition } from '../../lib/calc';
 import { DAILY_ESSENTIALS, SHORT_LABELS } from '../../lib/explain';
 import { planOn, sessionOn, shortDayTitle } from '../../lib/schedule';
 import { SendPackage } from '../../components/exchange';
+import { Ticks, weekLetters } from '../../components/ui';
 
 export function Today() {
   const { client, data, go, notify, preview, updateClient } = useApp();
@@ -78,16 +79,18 @@ export function Today() {
       )}
 
       <div className="grid two">
-        <section className="card stack" style={{ gap: 10 }} hidden={beforeStart}>
-          <div className="row" style={{ justifyContent: 'space-between' }}>
+        <section className="card stack hero-card" style={{ gap: 12 }} hidden={beforeStart}>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'nowrap' }}>
             <h2>Today's log</h2>
-            <span className={`pill ${doneCount === DAILY_ESSENTIALS.length ? 'good' : ''}`}>
-              {doneCount === DAILY_ESSENTIALS.length ? '✓ Done' : `${doneCount} of ${DAILY_ESSENTIALS.length}`}
-            </span>
+            {doneCount === DAILY_ESSENTIALS.length ? (
+              <span className="pill good">✓ Done</span>
+            ) : (
+              <span className="count">
+                <span className="figure">{doneCount}</span> of {DAILY_ESSENTIALS.length}
+              </span>
+            )}
           </div>
-          <div className="meter">
-            <span style={{ width: `${(doneCount / DAILY_ESSENTIALS.length) * 100}%` }} />
-          </div>
+          <Ticks size="lg" on={DAILY_ESSENTIALS.map((k) => !missing.includes(k))} label={`${doneCount} of ${DAILY_ESSENTIALS.length} daily items logged`} />
           {missing.length > 0 ? (
             <p className="small ink2">Still to add: {missing.map((k) => SHORT_LABELS[k] ?? k).join(', ')}.</p>
           ) : (
@@ -131,14 +134,14 @@ export function Today() {
               <b>{plan.name}</b>
               <div className="mini-stats">
                 <span>
-                  <b>{num(macros.kcal)}</b> kcal
+                  <b className="figure">{num(macros.kcal)}</b> kcal
                 </span>
                 <span>
-                  <b>{num(macros.pro)} g</b> protein
+                  <b className="figure">{num(macros.pro)}</b> g protein
                 </span>
                 {isNum(plan.water) && (
                   <span>
-                    <b>{num(plan.water, 1)} L</b> water
+                    <b className="figure">{num(plan.water, 1)}</b> L water
                   </span>
                 )}
               </div>
@@ -155,6 +158,7 @@ export function Today() {
 
         <section className="card stack" style={{ gap: 10 }}>
           <h2>This week so far</h2>
+          <Ticks on={loggedDays(wk)} marks={weekLetters(client.week1Date)} current={beforeStart ? undefined : day} label={`${daysLogged(wk)} of 7 days logged this week`} />
           <dl className="kv">
             <dt>Days logged</dt>
             <dd>{daysLogged(wk)} of 7</dd>
@@ -169,11 +173,6 @@ export function Today() {
               {isNum(stepsTarget) && <span className="muted"> of {num(stepsTarget)}</span>}
             </dd>
           </dl>
-          {isNum(s.steps) && isNum(stepsTarget) && stepsTarget > 0 && (
-            <div className={`meter ${s.steps < stepsTarget ? 'warn' : ''}`}>
-              <span style={{ width: `${Math.min(100, (s.steps / stepsTarget) * 100)}%` }} />
-            </div>
-          )}
         </section>
       </div>
 

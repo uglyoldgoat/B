@@ -4,6 +4,7 @@ import { blankClient } from '../lib/clients';
 import { SAMPLE_EXERCISES, SAMPLE_FOODS, makeSampleData } from '../lib/sample';
 import { ImportPackage } from '../components/exchange';
 import { TextInput } from '../components/ui';
+import { BrandMark, Icon } from '../components/icons';
 
 const EMPTY: AppData = { version: 1, activeClientId: '', clients: [], exercises: [], foods: [] };
 
@@ -64,8 +65,9 @@ export function Welcome({ onStart }: { onStart: (d: AppData) => void }) {
 
   return (
     <main className="welcome">
-      <div className="stack" style={{ gap: 6 }}>
-        <span className="brand-mark" style={{ fontSize: '1.6rem' }}>
+      <div className="welcome-hero">
+        <BrandMark size={56} />
+        <span className="brand-mark">
           Coach<span>book</span>
         </span>
         <p className="ink2">Check-ins, workouts, meal plans and progress for online coaching.</p>
@@ -73,6 +75,9 @@ export function Welcome({ onStart }: { onStart: (d: AppData) => void }) {
       <h2>Who will use this app on this device?</h2>
       <div className="role-grid">
         <button className="role" onClick={() => setStep('client')}>
+          <span className="role-icon">
+            <Icon name="today" />
+          </span>
           <span className="role-title">I'm a client</span>
           <span className="role-text">Log your day in a minute, see today's workout and meals, and send your check-in to your coach.</span>
         </button>
@@ -83,6 +88,9 @@ export function Welcome({ onStart }: { onStart: (d: AppData) => void }) {
             onStart({ ...d, mode: 'coach' });
           }}
         >
+          <span className="role-icon">
+            <Icon name="clients" />
+          </span>
           <span className="role-title">I'm a coach</span>
           <span className="role-text">See all your clients, review weekly check-ins, and send plans and feedback. Opens with a sample client to explore.</span>
         </button>

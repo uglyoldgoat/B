@@ -180,9 +180,9 @@ export function DataView() {
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Goal</th>
+                <th className="hide-sm">Goal</th>
                 <th className="n">Weeks logged</th>
-                <th>Source</th>
+                <th className="hide-sm">Source</th>
                 <th />
               </tr>
             </thead>
@@ -193,9 +193,9 @@ export function DataView() {
                     <b>{c.profile.name || 'Unnamed'}</b>
                     {c.isSample && <span className="pill" style={{ marginLeft: 6 }}>sample</span>}
                   </td>
-                  <td className="small">{c.profile.goal}</td>
+                  <td className="small hide-sm">{c.profile.goal}</td>
                   <td className="n num">{lastLoggedWeek(c)}</td>
-                  <td className="small muted">{c.importedFrom ? `${c.importedFrom}, ${formatDate(localDate(c.importedAt))}` : c.isSample ? 'Made-up data' : 'Created here'}</td>
+                  <td className="small muted hide-sm">{c.importedFrom ? `${c.importedFrom}, ${formatDate(localDate(c.importedAt))}` : c.isSample ? 'Made-up data' : 'Created here'}</td>
                   <td>
                     <div className="row" style={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
                       {c.id !== client.id && (

@@ -270,9 +270,13 @@ export function inferCycleDay(client: Client, week: number, day: number): number
 }
 
 /** Number of days in a week with at least one value entered. */
+/** For each of the 7 days, whether anything was logged. */
+export function loggedDays(week: CheckInWeek | undefined): boolean[] {
+  return Array.from({ length: 7 }, (_, i) => Object.values(week?.days[i] ?? {}).some((v) => v !== undefined && v !== null && v !== ''));
+}
+
 export function daysLogged(week: CheckInWeek | undefined): number {
-  if (!week) return 0;
-  return week.days.filter((d) => Object.values(d).some((v) => v !== undefined && v !== null && v !== '')).length;
+  return loggedDays(week).filter(Boolean).length;
 }
 
 export interface WeekRow {

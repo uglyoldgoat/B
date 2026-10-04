@@ -90,7 +90,7 @@ export function Review() {
       <div className="grid two" style={{ alignItems: 'start' }}>
         <Block title="Numbers">
           <div className="table-wrap">
-            <table>
+            <table className="numbers">
               <thead>
                 <tr>
                   <th />

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../context';
 import type { LoggedSet } from '../types';
 import { hasSets, isNum, letter, num, setStats } from '../lib/calc';
-import { Empty, NumInput } from '../components/ui';
+import { Empty, NumInput, Picker } from '../components/ui';
 import { Sparkline } from '../components/charts';
 
 function weeksLogged(logs: LoggedSet[][] | undefined): number {
@@ -70,21 +70,19 @@ export function Logbook() {
         </div>
       </div>
 
-      <div className="seg" role="group" aria-label="Training day" style={{ alignSelf: 'flex-start' }}>
-        {client.program.map((d, i) => (
-          <button
-            key={d.id}
-            aria-pressed={i === dayIdx}
-            onClick={() => {
-              setDayIdx(i);
-              const l = Math.max(0, ...d.exercises.map((e) => weeksLogged(client.logbook[e.id])));
-              setWeek(Math.max(1, l));
-            }}
-          >
-            {d.title}
-          </button>
-        ))}
-      </div>
+      <Picker
+        label="Training day"
+        value={client.program[dayIdx]?.id ?? ''}
+        options={client.program.map((d) => ({ id: d.id, label: d.title }))}
+        onChange={(id) => {
+          const i = client.program.findIndex((d) => d.id === id);
+          const d = client.program[i];
+          if (!d) return;
+          setDayIdx(i);
+          const l = Math.max(0, ...d.exercises.map((e) => weeksLogged(client.logbook[e.id])));
+          setWeek(Math.max(1, l));
+        }}
+      />
 
       <div className="stack" style={{ gap: 12 }}>
         {day.exercises.map((ex, ei) => {

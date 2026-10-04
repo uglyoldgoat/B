@@ -215,13 +215,19 @@ export function CheckIn() {
 
       {mode === 'day' ? (
         <>
-          <div className="chips" role="group" aria-label="Day">
+          <div className="day-chips" role="group" aria-label="Day">
             {wk.days.map((d, i) => {
               const iso = addDays(start, i);
               const filled = Object.values(d).some((v) => v !== undefined && v !== null && v !== '');
               return (
-                <button key={i} className={`chip ${filled ? 'done' : ''} ${iso === todayISO ? 'today' : ''}`} aria-pressed={day === i} onClick={() => setDay(i)}>
-                  <span className="d">{iso === todayISO ? 'Today' : formatDate(iso, { weekday: 'short' })}</span>
+                <button
+                  key={i}
+                  className={`chip ${filled ? 'done' : ''} ${iso === todayISO ? 'today' : ''}`}
+                  aria-pressed={day === i}
+                  aria-label={`${formatDate(iso, { weekday: 'long', day: 'numeric', month: 'long' })}${iso === todayISO ? ', today' : ''}${filled ? ', has entries' : ''}`}
+                  onClick={() => setDay(i)}
+                >
+                  <span className="d">{formatDate(iso, { weekday: 'short' })}</span>
                   <span className="n">{formatDate(iso, { day: 'numeric' })}</span>
                 </button>
               );

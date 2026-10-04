@@ -1,14 +1,14 @@
 import { useMemo, useRef, useState } from 'react';
 import { useApp } from '../context';
 import type { Client } from '../types';
-import { currentWeek, daysLogged, formatDate, isNum, latestWeight, localDate, mergeLibrary, num, summarizeWeek } from '../lib/calc';
+import { currentWeek, daysLogged, formatDate, isNum, latestWeight, localDate, loggedDays, mergeLibrary, num, summarizeWeek, todayPosition } from '../lib/calc';
 import { blankClient } from '../lib/clients';
 import { importFile } from '../lib/importer';
 import { putPhoto } from '../lib/store';
 import { weekFlags, weekToReview } from '../lib/review';
 import { Sparkline } from '../components/charts';
 import { ImportPackage } from '../components/exchange';
-import { Block, Empty } from '../components/ui';
+import { Block, Empty, Ticks, weekLetters } from '../components/ui';
 
 function ago(iso: string | undefined): string {
   if (!iso) return '';
@@ -150,7 +150,7 @@ export function Clients() {
       {!rows.length ? (
         <Empty title="No clients yet" />
       ) : (
-        <div className="grid two">
+        <div className="grid client-grid">
           {rows.map(({ c, now, st, flags, flagWeek, series, latest }) => (
             <section key={c.id} className="card stack client-card" style={{ gap: 10 }}>
               <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -167,18 +167,21 @@ export function Clients() {
                 </div>
                 <span className={`pill ${st.tone}`}>{st.tone === 'good' ? '✓ ' : st.tone === 'warn' ? '● ' : ''}{st.label}</span>
               </div>
-              <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}>
-                <div className="stack" style={{ gap: 0 }}>
-                  <span className="small muted">Weight (weekly avg)</span>
-                  <b className="num" style={{ fontSize: '1.3rem' }}>
-                    {latest ? `${latest.kg.toFixed(1)} kg` : '—'}
-                  </b>
+              <div className="client-figures">
+                <div className="stack" style={{ gap: 2 }}>
+                  <span className="small muted">Weekly average</span>
+                  <span>
+                    <b className="figure" style={{ fontSize: '2rem' }}>{latest ? latest.kg.toFixed(1) : '—'}</b>
+                    {latest && <span className="muted small"> kg</span>}
+                  </span>
                 </div>
-                <div className="stack" style={{ gap: 0 }}>
-                  <span className="small muted">This week</span>
-                  <b className="num">{daysLogged(c.checkIns[now])}/7 days</b>
-                </div>
-                <Sparkline values={series} width={110} height={34} ariaLabel={`${c.profile.name} weekly weight`} />
+                <Sparkline values={series} width={120} height={40} ariaLabel={`${c.profile.name} weekly weight`} />
+              </div>
+              <div className="stack" style={{ gap: 4 }}>
+                <span className="small muted">
+                  Week {now}: {daysLogged(c.checkIns[now])} of 7 days logged
+                </span>
+                <Ticks on={loggedDays(c.checkIns[now])} marks={weekLetters(c.week1Date)} current={todayPosition(c.week1Date).week === now ? todayPosition(c.week1Date).day : undefined} label={`${daysLogged(c.checkIns[now])} of 7 days logged in week ${now}`} />
               </div>
               {flags.length > 0 ? (
                 <div className="stack" style={{ gap: 2 }}>

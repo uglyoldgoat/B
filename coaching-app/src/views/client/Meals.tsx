@@ -3,7 +3,7 @@ import { useApp } from '../../context';
 import { WEEKDAYS } from '../../types';
 import { dayMacros, findFood, foodIndex, isNum, mealMacros, num, swapQuantity } from '../../lib/calc';
 import { nutritionSchedule, planOn } from '../../lib/schedule';
-import { Empty } from '../../components/ui';
+import { Empty, Picker } from '../../components/ui';
 import { MacroBar } from '../../components/charts';
 
 export function Meals() {
@@ -37,36 +37,26 @@ export function Meals() {
       </div>
 
       {plans.length > 1 && (
-        <div className="seg big" role="group" aria-label="Plan" style={{ alignSelf: 'flex-start' }}>
-          {plans.map((p) => {
-            const days = daysFor(p.id);
-            return (
-              <button key={p.id} aria-pressed={p.id === plan.id} onClick={() => setSelId(p.id)}>
-                {p.name}
-                {days.length > 0 && <span className="muted small"> · {days.join(', ')}</span>}
-              </button>
-            );
-          })}
-        </div>
+        <Picker label="Plan" value={plan.id} onChange={setSelId} options={plans.map((p) => ({ id: p.id, label: p.name, sub: daysFor(p.id).join(', ') || undefined }))} />
       )}
 
       <section className="card stack" style={{ gap: 10 }}>
         <div className="mini-stats">
           <span>
-            <b>{num(total.kcal)}</b> kcal
+            <b className="figure">{num(total.kcal)}</b> kcal
           </span>
           <span>
-            <b>{num(total.pro)} g</b> protein
+            <b className="figure">{num(total.pro)}</b> g protein
           </span>
           <span>
-            <b>{num(total.cho)} g</b> carbs
+            <b className="figure">{num(total.cho)}</b> g carbs
           </span>
           <span>
-            <b>{num(total.fat)} g</b> fat
+            <b className="figure">{num(total.fat)}</b> g fat
           </span>
           {isNum(plan.water) && (
             <span>
-              <b>{num(plan.water, 1)} L</b> water
+              <b className="figure">{num(plan.water, 1)}</b> L water
             </span>
           )}
         </div>

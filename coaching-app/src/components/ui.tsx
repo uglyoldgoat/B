@@ -220,6 +220,27 @@ export function Choice({
   );
 }
 
+/** Choose one of a few options, each with an optional second line (e.g. the weekdays it applies to).
+ * Up to three options share the width; more scroll sideways with the chosen one kept in view. */
+export function Picker({ label, options, value, onChange }: { label: string; options: { id: string; label: string; sub?: string }[]; value: string; onChange: (id: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const box = ref.current;
+    const el = box?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (box && el) box.scrollLeft = el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2;
+  }, [value]);
+  return (
+    <div ref={ref} className={`seg big picker ${options.length <= 3 ? 'fill' : ''}`} role="group" aria-label={label}>
+      {options.map((o) => (
+        <button key={o.id} type="button" aria-pressed={o.id === value} onClick={() => onChange(o.id)}>
+          <span>{o.label}</span>
+          {o.sub && <span className="sub">{o.sub}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function Stat({
   label,
   value,
@@ -247,6 +268,38 @@ export function Stat({
       {children}
     </div>
   );
+}
+
+/** A meter with one tick per real unit: a day of the week, a daily item, a set.
+ * `marks` labels each tick (e.g. weekday letters); `current` outlines one tick. */
+export function Ticks({ on, label, marks, current, size }: { on: boolean[]; label: string; marks?: string[]; current?: number; size?: 'lg' }) {
+  return (
+    <div className={`ticks ${size ?? ''}`} role="img" aria-label={label} style={{ ['--n' as string]: on.length }}>
+      <div className="ticks-bar">
+        {on.map((v, i) => (
+          <span key={i} className={`${v ? 'on' : ''} ${i === current ? 'now' : ''}`} />
+        ))}
+      </div>
+      {marks && (
+        <div className="ticks-marks" aria-hidden="true">
+          {marks.map((m, i) => (
+            <span key={i} className={i === current ? 'now' : ''}>
+              {m}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Short weekday labels for the seven days of a check-in week, in the client's order and the phone's language. */
+export function weekLetters(week1Date: string | undefined): string[] {
+  const parsed = week1Date ? new Date(`${week1Date}T12:00:00`) : null;
+  // Without a start date, weeks run Monday to Sunday (1 January 2024 was a Monday).
+  const start = parsed && !Number.isNaN(parsed.getTime()) ? parsed : new Date(2024, 0, 1, 12);
+  const fmt = new Intl.DateTimeFormat(undefined, { weekday: 'narrow' });
+  return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i, 12)));
 }
 
 export function Block({ title, eyebrow, actions, children, id }: { title: ReactNode; eyebrow?: string; actions?: ReactNode; children: ReactNode; id?: string }) {
