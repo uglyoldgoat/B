@@ -134,9 +134,13 @@ Those tests compare the app's numbers with the values cached in the workbook
 
 ## Deploying
 
-`npm run build` produces a static site in `dist/` that can be served from any
-static host over HTTPS (GitHub Pages, Netlify, Cloudflare Pages, S3). There is
-no server. The build also writes `dist/sw.js` (from `sw.template.js`) with the
+The app is published with GitHub Pages at **https://uglyoldgoat.github.io/B/**.
+Every push that changes `coaching-app/` runs `.github/workflows/pages.yml`, which
+tests and builds the app and publishes `dist/` to the `gh-pages` branch. Pages
+serves that branch (Settings → Pages → Deploy from a branch → `gh-pages`, root).
+
+`npm run build` produces the same static site in `dist/`; it can be served from
+any static host over HTTPS (Netlify, Cloudflare Pages, S3). There is no server. The build also writes `dist/sw.js` (from `sw.template.js`) with the
 list of this build's files, for offline use.
 
 The screens load in two chunks, so a client's phone never downloads the coach

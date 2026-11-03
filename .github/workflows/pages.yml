@@ -1,0 +1,44 @@
+# Builds the Coachbook app and publishes it to the gh-pages branch, which GitHub Pages
+# serves at https://uglyoldgoat.github.io/B/. Runs whenever the app changes.
+name: Publish Coachbook
+
+on:
+  push:
+    branches: [claude/coaching-app, claude/ecc-repo-setup-0e2avf]
+    paths: ['coaching-app/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: coaching-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: coaching-app/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Publish dist/ to the gh-pages branch
+        working-directory: coaching-app/dist
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          touch .nojekyll
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Publish Coachbook from ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
